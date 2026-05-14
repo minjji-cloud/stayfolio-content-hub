@@ -322,11 +322,15 @@
               <h3>📥 최근 협업 요청</h3>
               <select id="dash-period-filter" onchange="renderDashboard()"
                 style="font-family:var(--font);font-size:12px;padding:5px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">
-                <option value="1">최근 1개월</option>
-                <option value="3">최근 3개월</option>
-                <option value="6" selected>최근 6개월</option>
-                <option value="9">최근 9개월</option>
-                <option value="12">최근 1년</option>
+                <option value="7">최근 1주</option>
+                <option value="14">최근 2주</option>
+                <option value="30" selected>최근 1개월</option>
+                <option value="90">최근 3개월</option>
+              </select>
+              <select id="dash-sort" onchange="renderDashboard()"
+                style="font-family:var(--font);font-size:12px;padding:5px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">
+                <option value="asc">기한 오름차순 ↑</option>
+                <option value="desc">기한 내림차순 ↓</option>
               </select>
               <button class="btn" onclick="switchView('requests')">전체 보기</button>
             </div>
@@ -344,6 +348,11 @@
             <button class="filter-chip" onclick="filterReq('진행중',this)">진행중</button>
             <button class="filter-chip" onclick="filterReq('검수중',this)">검수중</button>
             <button class="filter-chip" onclick="filterReq('발행완료',this)">발행완료</button>
+            <select id="req-sort" onchange="renderRequests()"
+              style="font-family:var(--font);font-size:12px;padding:5px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">
+              <option value="asc">기한 오름차순 ↑</option>
+              <option value="desc">기한 내림차순 ↓</option>
+            </select>
             <div style="margin-left:auto;" class="search-box">
               <span style="color:var(--text-faint);">🔍</span>
               <input type="text" placeholder="프로젝트 · 요청자 · 팀 검색..." id="search-input" oninput="renderRequests()" style="width:200px;">
@@ -474,6 +483,12 @@
                 <input type="date" id="arc-date-to" onchange="renderArchive()"
                   style="font-family:var(--mono);font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);">
               </div>
+              <!-- 정렬 -->
+              <select id="arc-sort" onchange="renderArchive()"
+                style="font-family:var(--font);font-size:12px;padding:5px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">
+                <option value="asc">발행일 오름차순 ↑</option>
+                <option value="desc">발행일 내림차순 ↓</option>
+              </select>
               <!-- 초기화 -->
               <button onclick="clearArchiveFilter()"
                 style="padding:5px 12px;border-radius:20px;font-size:12px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text-muted);font-family:var(--font);">
@@ -968,17 +983,20 @@ function renderDashboard(){
         </div>
       </div>`;
   }
-  // ── 기간 필터 적용 ──
-  const months = parseInt(document.getElementById('dash-period-filter')?.value || '6');
-  const cutoff = new Date();
-  cutoff.setMonth(cutoff.getMonth() - months);
-  const cutoffStr = cutoff.toISOString().split('T')[0];
+  // ── 기간 필터 적용 (KST 기준 일수) ──
+  const days = parseInt(document.getElementById('dash-period-filter')?.value || '30');
+  const sortDir = document.getElementById('dash-sort')?.value || 'asc';
+  const kstNow = new Date(new Date().getTime() + 9*60*60*1000);
+  const cutoffKST = new Date(kstNow.getTime() - days * 86400000);
+  const cutoffStr = cutoffKST.toISOString().split('T')[0];
 
   const tbody = document.getElementById('dash-tbody');
   if(!allRequests.length){
     tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-faint);">🔄 동기화 버튼을 눌러주세요</td></tr>'; return;
   }
-  const filtered = allRequests.filter(r => !r.createdAt || r.createdAt >= cutoffStr);
+  let filtered = allRequests.filter(r => !r.createdAt || r.createdAt >= cutoffStr);
+  // 기한 기준 정렬
+  filtered = sortByDeadline(filtered, sortDir);
   if(!filtered.length){
     tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-faint);">해당 기간에 요청서가 없습니다</td></tr>'; return;
   }
@@ -990,6 +1008,15 @@ function renderDashboard(){
     <td><span class="badge ${r.status}">${statusLabel(r.status)}</span></td>
     <td><span class="action-link">상세 →</span></td>
   </tr>`).join('');
+}
+
+// ── 공통 정렬 함수 ──
+function sortByDeadline(list, dir='asc') {
+  return [...list].sort((a, b) => {
+    const da = a.deadline || '9999';
+    const db = b.deadline || '9999';
+    return dir === 'asc' ? da.localeCompare(db) : db.localeCompare(da);
+  });
 }
 
 function filterReq(f,btn){
@@ -1006,6 +1033,7 @@ function renderRequests(){
   const q=(document.getElementById('search-input')?.value||'').toLowerCase();
   const dateFrom=document.getElementById('filter-date-from')?.value||'';
   const dateTo=document.getElementById('filter-date-to')?.value||'';
+  const sortDir=document.getElementById('req-sort')?.value||'asc';
   const statusMap={'대기중':'waiting','진행중':'in-progress','검수중':'review','발행완료':'published'};
   const tbody=document.getElementById('req-tbody');
   let list=allRequests.filter(r=>{
@@ -1015,6 +1043,7 @@ function renderRequests(){
     if(dateTo   && r.deadline && r.deadline > dateTo)   return false;
     return true;
   });
+  list = sortByDeadline(list, sortDir);
   if(!list.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-faint);">요청서가 없습니다</td></tr>';return;}
   tbody.innerHTML=list.map(r=>{
     const chHtml=r.channels.map(c=>`<span class="content-tag ${chType(c)}">${c}</span>`).join('');
@@ -1173,9 +1202,10 @@ function renderArchive(){
   const fAssignee  = document.getElementById('arc-filter-assignee')?.value||'';
   const fDateFrom  = document.getElementById('arc-date-from')?.value||'';
   const fDateTo    = document.getElementById('arc-date-to')?.value||'';
+  const arcSortDir = document.getElementById('arc-sort')?.value||'asc';
 
   // 필터 적용
-  const filtered = allItems.filter(a => {
+  let filtered = allItems.filter(a => {
     if(q && !a.project.toLowerCase().includes(q) && !a.team.toLowerCase().includes(q) && !a.assignee.toLowerCase().includes(q)) return false;
     if(fTeam    && a.team !== fTeam) return false;
     if(fChannel && !a.channel.replace(/\s/g,'').includes(fChannel.replace(/\s/g,''))) return false;
@@ -1183,6 +1213,13 @@ function renderArchive(){
     if(fDateFrom && a.date !== '—' && a.date < fDateFrom) return false;
     if(fDateTo   && a.date !== '—' && a.date > fDateTo)   return false;
     return true;
+  });
+
+  // 발행일 정렬
+  filtered = [...filtered].sort((a,b)=>{
+    const da = a.date==='—'?'9999':a.date;
+    const db = b.date==='—'?'9999':b.date;
+    return arcSortDir==='asc' ? da.localeCompare(db) : db.localeCompare(da);
   });
 
   // 통계 업데이트
