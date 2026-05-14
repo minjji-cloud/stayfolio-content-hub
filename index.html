@@ -499,26 +499,7 @@
       <div style="font-size:15px;font-weight:700;">채널 선택</div>
       <button onclick="closeAddChPopup()" style="border:none;background:none;cursor:pointer;font-size:18px;color:var(--text-muted);">✕</button>
     </div>
-    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:6px;">
-      ${[
-        {label:'[IG] 피드',     key:'ig-feed',   color:'#3EB8BB'},
-        {label:'[IG] 스토리',   key:'ig-story',  color:'#3EB1BB'},
-        {label:'[IG] 릴스',     key:'ig-reels',  color:'#6AA2CD'},
-        {label:'[IG] 쓰레드',   key:'ig-thread', color:'#B43C8A'},
-        {label:'[뉴스레터] 소식지', key:'nl-news', color:'#712B82'},
-        {label:'[뉴스레터] 단독',   key:'nl-solo', color:'#712B82'},
-        {label:'[플랫폼] 메인배너', key:'platform', color:'#5F2B82'},
-      ].map(ch=>`
-        <button onclick="selectAddChannel('${ch.label}')"
-          style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);
-          border:1px solid var(--border);background:var(--surface);cursor:pointer;font-family:var(--font);
-          font-size:13px;color:var(--text);text-align:left;transition:all 0.12s;"
-          onmouseover="this.style.borderColor='${ch.color}';this.style.background='#F8FFFE'"
-          onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
-          <span style="width:8px;height:8px;border-radius:50%;background:${ch.color};flex-shrink:0;"></span>
-          ${ch.label}
-        </button>`).join('')}
-    </div>
+    <div id="add-ch-list" style="padding:16px 20px;display:flex;flex-direction:column;gap:6px;"></div>
   </div>
 </div>
 
@@ -537,7 +518,8 @@
       <input type="text" id="add-ch-name-input" placeholder="예: 1차, 이벤트, 하반기 등"
         style="width:100%;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border);
         font-family:var(--font);font-size:13px;color:var(--text);margin-bottom:10px;"
-        onkeydown="if(event.key==='Enter')confirmAddChannel()">
+        onkeydown="if(event.key==='Enter')confirmAddChannel()"
+        oninput="updateChPreview()">
       <div style="font-size:11px;color:var(--text-faint);margin-bottom:16px;">
         최종 채널명: <strong id="add-ch-preview" style="color:var(--accent);"></strong>
       </div>
@@ -1375,7 +1357,7 @@ function openDetail(rowIndex){
       <select id="status-select" style="font-family:var(--font);font-size:13px;padding:6px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">${statusOptions}</select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <div class="field-group"><div class="field-label">프로모션 오픈</div><div style="font-family:var(--mono);font-size:12px;">${r.promoDate||'—'}</div></div>
+      <div class="field-group"><div class="field-label">프로모션 오픈</div><div style="font-family:var(--mono);font-size:12px;">${formatDateWithDay(r.promoDate)||'—'}</div></div>
       <div class="field-group"><div class="field-label">작업 기한</div><div style="font-family:var(--mono);font-size:12px;">${formatDateWithDay(r.deadline)||'—'}</div></div>
     </div>
     <div class="field-group">
@@ -1544,7 +1526,29 @@ function checkUrlParam() {
 let _addChBase = '';
 let _currentPanelRowIndex = null; // openDetail에서 설정
 
+const ADD_CH_OPTIONS = [
+  {label:'[IG] 피드',          color:'#3EB8BB'},
+  {label:'[IG] 스토리',        color:'#3EB1BB'},
+  {label:'[IG] 릴스',          color:'#6AA2CD'},
+  {label:'[IG] 쓰레드',        color:'#B43C8A'},
+  {label:'[뉴스레터] 소식지',  color:'#712B82'},
+  {label:'[뉴스레터] 단독',    color:'#712B82'},
+  {label:'[플랫폼] 메인배너',  color:'#5F2B82'},
+];
+
 function openAddChannelPopup() {
+  // 채널 목록 동적 생성
+  const list = document.getElementById('add-ch-list');
+  list.innerHTML = ADD_CH_OPTIONS.map(ch => `
+    <button onclick="selectAddChannel('${ch.label}')"
+      style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);
+      border:1px solid var(--border);background:var(--surface);cursor:pointer;font-family:var(--font);
+      font-size:13px;color:var(--text);text-align:left;width:100%;transition:all 0.12s;"
+      onmouseover="this.style.borderColor='${ch.color}';this.style.background='#F8FFFE'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
+      <span style="width:8px;height:8px;border-radius:50%;background:${ch.color};flex-shrink:0;"></span>
+      ${ch.label}
+    </button>`).join('');
   document.getElementById('add-ch-step1').style.display = 'flex';
 }
 
@@ -1556,7 +1560,6 @@ function selectAddChannel(baseLabel) {
   input.value = '';
   updateChPreview();
   input.focus();
-  input.addEventListener('input', updateChPreview);
 }
 
 function updateChPreview() {
