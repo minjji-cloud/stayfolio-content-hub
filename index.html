@@ -167,7 +167,9 @@
   /* Detail panel */
   .overlay{display:none;position:fixed;inset:0;background:rgba(20,18,14,0.5);z-index:100;align-items:flex-start;justify-content:flex-end;}
   .overlay.open{display:flex;}
-  .panel{width:480px;height:100vh;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;animation:slideIn 0.22s ease;}
+  .panel{width:480px;min-width:360px;max-width:90vw;height:100vh;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;animation:slideIn 0.22s ease;position:relative;}
+  .panel-resize-handle{position:absolute;left:0;top:0;bottom:0;width:5px;cursor:ew-resize;background:transparent;z-index:10;transition:background 0.15s;}
+  .panel-resize-handle:hover{background:var(--accent);}
   @keyframes slideIn{from{transform:translateX(40px);opacity:0;}to{transform:translateX(0);opacity:1;}}
   .panel-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px;position:sticky;top:0;background:var(--surface);z-index:1;}
   .panel-close{width:30px;height:30px;border-radius:var(--radius);border:1px solid var(--border);background:none;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);}
@@ -359,7 +361,17 @@
             <button class="filter-chip" onclick="clearDateFilter()" style="font-size:11px;padding:4px 10px;">초기화</button>
           </div>
           <div class="table-wrap">
-            <table><thead><tr><th>요청팀</th><th>프로젝트명</th><th>요청자</th><th>기한</th><th>채널</th><th>협업 내용</th><th>상태</th><th>배정현황</th><th></th></tr></thead>
+            <table style="table-layout:fixed;"><thead><tr>
+              <th style="width:10%;">요청팀</th>
+              <th style="width:18%;">프로젝트명</th>
+              <th style="width:8%;white-space:nowrap;">요청자</th>
+              <th style="width:12%;white-space:nowrap;">기한</th>
+              <th style="width:20%;">채널</th>
+              <th style="width:14%;">협업 내용</th>
+              <th style="width:9%;white-space:nowrap;">상태</th>
+              <th style="width:9%;white-space:nowrap;">배정현황</th>
+              <th style="width:5%;"></th>
+            </tr></thead>
             <tbody id="req-tbody"></tbody></table>
           </div>
         </div>
@@ -482,7 +494,8 @@
 
 <!-- Detail Panel -->
 <div class="overlay" id="detail-overlay" onclick="if(event.target===this)closePanel()">
-  <div class="panel">
+  <div class="panel" id="detail-panel">
+    <div class="panel-resize-handle" id="panel-resize-handle"></div>
     <div class="panel-header">
       <div style="flex:1;">
         <div style="font-size:16px;font-weight:700;margin-bottom:4px;" id="panel-title">—</div>
@@ -711,12 +724,13 @@ async function saveChannelData(rowIndex) {
   const scheduleParts = [], assignees = [], deployParts = [];
   r.channels.forEach(ch => {
     const sid = ch.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'');
-    const assignee  = document.getElementById(`a_${sid}`)?.value.trim() || '';
-    const date      = document.getElementById(`d_${sid}`)?.value.trim() || '';
-    const deployed  = document.getElementById(`p_${sid}`)?.checked || false;
+    const skipped  = document.getElementById(`sk_${sid}`)?.checked || false;
+    const assignee = skipped ? '' : (document.getElementById(`a_${sid}`)?.value.trim() || '');
+    const date     = skipped ? '' : (document.getElementById(`d_${sid}`)?.value.trim() || '');
+    const deployed = skipped ? false : (document.getElementById(`p_${sid}`)?.checked || false);
     if(date) scheduleParts.push(`${ch}:${date}`);
     if(assignee) assignees.push(assignee);
-    deployParts.push(`${ch}:${deployed}`);
+    deployParts.push(`${ch}:${skipped ? 'skip' : deployed}`);
   });
 
   const scheduleStr = scheduleParts.join(',');
@@ -950,22 +964,28 @@ function renderRequests(){
   tbody.innerHTML=list.map(r=>{
     const chHtml=r.channels.map(c=>`<span class="content-tag ${chType(c)}">${c}</span>`).join('');
     const totalCh = r.channels.length;
+    // skip된 채널 파악
+    const skipCount = (r.deployed||'').split(',').filter(seg=>{
+      const parts = seg.split(':');
+      return parts.length >= 2 && parts[1].trim() === 'skip';
+    }).length;
+    const activeCh = totalCh - skipCount;
     const assignedCh = r.assignee ? r.assignee.split(',').filter(a=>a.trim()).length : 0;
-    const unassignedCh = totalCh - assignedCh;
-    const assigned = unassignedCh <= 0
+    const unassignedCh = Math.max(0, activeCh - assignedCh);
+    const assigned = unassignedCh <= 0 && activeCh > 0
       ? `<span style="white-space:nowrap;font-size:11px;color:#1A7A4A;font-weight:600;">✓ 전체 배정 완료</span>`
-      : `<span style="white-space:nowrap;font-size:11px;color:var(--text-muted);"><strong style="color:#2B5BFF;font-weight:700;">${unassignedCh}개</strong> 미배정</span>`;
-    const detailPreview = r.detail ? r.detail.slice(0,30)+(r.detail.length>30?'…':'') : '—';
+      : `<span style="white-space:nowrap;font-size:11px;color:var(--text-muted);"><strong style="color:#2B5BFF;font-weight:700;">${unassignedCh}개</strong> 미배정${skipCount>0?` <span style="font-size:10px;color:var(--text-faint);">(${skipCount}개 제외)</span>`:''}</span>`;
+    const detailPreview = r.detail ? r.detail.slice(0,28)+(r.detail.length>28?'…':'') : '—';
     return `<tr style="cursor:pointer" onclick="openDetail('${r._rowIndex}')">
-      <td><span class="team-tag">${r.team}</span></td>
-      <td style="font-weight:500;font-size:13px;">${r.project}${!r.assignee&&r.status!=='published'?'<span class="tooltip-tag">미배정</span>':''}</td>
-      <td style="font-size:12px;color:var(--text-muted);">${stripAt(r.requester)}</td>
-      <td class="date-mono" style="white-space:nowrap;">${formatDateWithDay(r.deadline)}</td>
-      <td><div style="display:flex;flex-wrap:wrap;gap:2px;">${chHtml}</div></td>
-      <td style="font-size:11px;color:var(--text-muted);max-width:160px;">${detailPreview}</td>
-      <td><span class="badge ${r.status}">${statusLabel(r.status)}</span></td>
+      <td style="font-size:12px;"><span class="team-tag">${r.team}</span></td>
+      <td style="font-weight:500;font-size:13px;word-break:keep-all;">${r.project}${!r.assignee&&r.status!=='published'?'<span class="tooltip-tag">미배정</span>':''}</td>
+      <td style="font-size:12px;color:var(--text-muted);white-space:nowrap;">${stripAt(r.requester)}</td>
+      <td class="date-mono" style="white-space:nowrap;font-size:11px;">${formatDateWithDay(r.deadline)}</td>
+      <td style="font-size:11px;"><div style="display:flex;flex-wrap:wrap;gap:2px;">${chHtml}</div></td>
+      <td style="font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">${detailPreview}</td>
+      <td><span class="badge ${r.status}" style="font-size:10px;">${statusLabel(r.status)}</span></td>
       <td style="font-size:11px;">${assigned}</td>
-      <td><span class="action-link">배정 →</span></td>
+      <td><span class="action-link" style="white-space:nowrap;">배정 →</span></td>
     </tr>`;
   }).join('');
 }
@@ -1222,9 +1242,16 @@ function openDetail(rowIndex){
 
   // 배포 여부 파싱 ("IG피드:true,뉴스레터:false")
   const deployMap={};
+  const skipMap={};
   (r.deployed||'').split(',').forEach(seg=>{
-    const [ch,val]=(seg+':').split(':');
-    if(ch.trim()) deployMap[ch.trim()]=val.trim()==='true';
+    const parts = seg.split(':');
+    if(parts.length < 2) return;
+    const ch = parts[0].trim();
+    const val = parts[1].trim();
+    if(ch) {
+      deployMap[ch] = val === 'true';
+      skipMap[ch]   = val === 'skip';
+    }
   });
 
   const chRowsHtml=r.channels.map((ch,i)=>{
@@ -1232,25 +1259,33 @@ function openDetail(rowIndex){
     const assignee=assigneeList[i]||'';
     const date=schedMap[ch]||'';
     const deployed=deployMap[ch]||false;
+    const skipped=skipMap[ch]||false;
     const memberOptions = TEAM_MEMBERS.map(m=>
       `<option value="${m}" ${m===assignee?'selected':''}>${m}</option>`
     ).join('');
-    return `<tr>
+    return `<tr id="row_${sid}" style="${skipped?'opacity:0.4;':''}">
       <td><span class="content-tag ${chType(ch)}">${ch}</span></td>
       <td>
-        <select class="ch-input" id="a_${sid}" style="cursor:pointer;">
+        <select class="ch-input" id="a_${sid}" style="cursor:pointer;" ${skipped?'disabled':''}>
           <option value="">— 선택 —</option>
           ${memberOptions}
         </select>
       </td>
-      <td><input class="ch-input date" id="d_${sid}" type="date" value="${date}"></td>
+      <td><input class="ch-input date" id="d_${sid}" type="date" value="${date}" ${skipped?'disabled':''}></td>
+      <td style="text-align:center;">
+        <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;" title="진행X (카운트 제외)">
+          <input type="checkbox" id="sk_${sid}" ${skipped?'checked':''} onchange="updateSkipRow(this,'${sid}')"
+            style="width:14px;height:14px;cursor:pointer;accent-color:var(--red);">
+          <span style="font-size:10px;color:var(--red);font-weight:600;">X</span>
+        </label>
+      </td>
       <td style="text-align:center;">
         <label style="display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;">
-          <input type="checkbox" id="p_${sid}" ${deployed?'checked':''} onchange="updateDeployBadge(this,'${sid}')"
+          <input type="checkbox" id="p_${sid}" ${deployed?'checked':''} ${skipped?'disabled':''} onchange="updateDeployBadge(this,'${sid}')"
             style="width:16px;height:16px;cursor:pointer;accent-color:var(--green);">
           <span id="pb_${sid}" style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;
             ${deployed?'background:var(--green-light);color:var(--green);':'background:var(--surface2);color:var(--text-faint);'}">
-            ${deployed?'완료':'미배포'}
+            ${skipped?'제외':(deployed?'완료':'미배포')}
           </span>
         </label>
       </td>
@@ -1282,7 +1317,7 @@ function openDetail(rowIndex){
         <span style="font-size:10px;color:var(--text-faint);font-weight:400;">저장 시 Sheets 자동 반영</span>
       </h4>
       <table class="ch-table">
-        <thead><tr><th>채널</th><th>담당자</th><th>발행일</th><th style="text-align:center;">배포</th></tr></thead>
+        <thead><tr><th>채널</th><th>담당자</th><th>발행일</th><th style="text-align:center;color:var(--red);">진행X</th><th style="text-align:center;">배포</th></tr></thead>
         <tbody>${chRowsHtml}</tbody>
       </table>
       <button class="save-btn" id="save-btn" onclick="saveChannelData('${r._rowIndex}')">💾 Sheets에 저장</button>
@@ -1402,6 +1437,50 @@ function checkUrlParam() {
     tryOpen();
   }
 }
+
+function updateSkipRow(checkbox, sid) {
+  const row   = document.getElementById(`row_${sid}`);
+  const aEl   = document.getElementById(`a_${sid}`);
+  const dEl   = document.getElementById(`d_${sid}`);
+  const pEl   = document.getElementById(`p_${sid}`);
+  const pbEl  = document.getElementById(`pb_${sid}`);
+  const skip  = checkbox.checked;
+  if(row)  row.style.opacity  = skip ? '0.4' : '1';
+  if(aEl)  aEl.disabled       = skip;
+  if(dEl)  dEl.disabled       = skip;
+  if(pEl)  pEl.disabled       = skip;
+  if(pbEl) { pbEl.textContent = skip ? '제외' : (pEl?.checked ? '완료' : '미배포'); }
+}
+
+// 패널 리사이즈
+(function() {
+  let isResizing = false;
+  let startX = 0;
+  let startWidth = 0;
+  document.addEventListener('mousedown', e => {
+    const handle = document.getElementById('panel-resize-handle');
+    if(!handle || !handle.contains(e.target)) return;
+    isResizing = true;
+    startX = e.clientX;
+    startWidth = document.getElementById('detail-panel')?.offsetWidth || 480;
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+  });
+  document.addEventListener('mousemove', e => {
+    if(!isResizing) return;
+    const panel = document.getElementById('detail-panel');
+    if(!panel) return;
+    const newWidth = startWidth - (e.clientX - startX);
+    panel.style.width = Math.max(360, Math.min(window.innerWidth * 0.9, newWidth)) + 'px';
+  });
+  document.addEventListener('mouseup', () => {
+    if(isResizing) {
+      isResizing = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+  });
+})();
 
 function closePanel(){
   document.getElementById('detail-overlay').classList.remove('open');
