@@ -376,9 +376,88 @@
 
         <!-- Archive -->
         <div class="view" id="view-archive">
+          <!-- 아카이브 필터 바 -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:16px;">
+            <!-- 상단 요약 숫자 -->
+            <div style="display:flex;gap:24px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);">
+              <div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">전체 배포</div>
+                <div style="font-size:20px;font-weight:700;font-family:var(--mono);" id="arc-stat-total">0</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">IG</div>
+                <div style="font-size:20px;font-weight:700;font-family:var(--mono);color:#3EB8BB;" id="arc-stat-ig">0</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">뉴스레터</div>
+                <div style="font-size:20px;font-weight:700;font-family:var(--mono);color:#712B82;" id="arc-stat-nl">0</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">플랫폼</div>
+                <div style="font-size:20px;font-weight:700;font-family:var(--mono);color:#5F2B82;" id="arc-stat-platform">0</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">프로젝트 수</div>
+                <div style="font-size:20px;font-weight:700;font-family:var(--mono);" id="arc-stat-projects">0</div>
+              </div>
+            </div>
+            <!-- 검색+필터 행 -->
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+              <!-- 텍스트 검색 -->
+              <div class="search-box" style="flex:1;min-width:180px;">
+                <span style="color:var(--text-faint);">🔍</span>
+                <input type="text" id="arc-search" placeholder="프로젝트명, 요청팀, 담당자 검색..." oninput="renderArchive()" style="width:100%;">
+              </div>
+              <!-- 요청팀 필터 -->
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">요청팀:</span>
+                <select id="arc-filter-team" onchange="renderArchive()"
+                  style="font-family:var(--font);font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">
+                  <option value="">전체</option>
+                </select>
+              </div>
+              <!-- 채널 필터 -->
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">채널:</span>
+                <select id="arc-filter-channel" onchange="renderArchive()"
+                  style="font-family:var(--font);font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">
+                  <option value="">전체</option>
+                  <option value="IG피드">IG 피드</option>
+                  <option value="IG스토리">IG 스토리</option>
+                  <option value="IG릴스">IG 릴스</option>
+                  <option value="IG쓰레드">IG 쓰레드</option>
+                  <option value="뉴스레터">뉴스레터</option>
+                  <option value="플랫폼배너">플랫폼 배너</option>
+                  <option value="기타">기타</option>
+                </select>
+              </div>
+              <!-- 담당자 필터 -->
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">담당자:</span>
+                <select id="arc-filter-assignee" onchange="renderArchive()"
+                  style="font-family:var(--font);font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">
+                  <option value="">전체</option>
+                </select>
+              </div>
+              <!-- 배포 기간 -->
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">배포일:</span>
+                <input type="date" id="arc-date-from" onchange="renderArchive()"
+                  style="font-family:var(--mono);font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);">
+                <span style="font-size:12px;color:var(--text-faint);">~</span>
+                <input type="date" id="arc-date-to" onchange="renderArchive()"
+                  style="font-family:var(--mono);font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);">
+              </div>
+              <!-- 초기화 -->
+              <button onclick="clearArchiveFilter()"
+                style="padding:5px 12px;border-radius:20px;font-size:12px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text-muted);font-family:var(--font);">
+                초기화
+              </button>
+            </div>
+          </div>
           <div class="table-wrap">
             <div class="table-header"><h3>🗂️ 발행 완료 아카이브</h3><span style="font-size:12px;color:var(--text-muted);">총 <strong id="archive-count">0</strong>건</span></div>
-            <table><thead><tr><th>요청팀</th><th>프로젝트명</th><th>배포 채널</th><th>발행일</th><th>담당자</th><th>요청자</th></tr></thead>
+            <table><thead><tr><th>요청팀</th><th>프로젝트명</th><th>배포 채널</th><th>채널 수</th><th>요청자</th></tr></thead>
             <tbody id="archive-tbody"></tbody></table>
           </div>
         </div>
@@ -415,6 +494,13 @@ const CONFIG = {
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 const COL = { ID:0,TEAM:1,REQUESTER:2,PROJECT:3,PROMO_DATE:4,DEADLINE:5,CHANNELS:6,KICKOFF:7,REVIEW:8,DETAIL:9,STATUS:10,ASSIGNEE:11,SCHEDULE:12,CREATED_AT:13 };
 
+// 팀원 목록 (localStorage에 저장)
+let TEAM_MEMBERS = JSON.parse(localStorage.getItem('hub_team_members') || '["김민지","이수진","박준형","최아름"]');
+
+function saveTeamMembers() {
+  localStorage.setItem('hub_team_members', JSON.stringify(TEAM_MEMBERS));
+}
+
 let allRequests = [];
 let currentFilter = 'all';
 const _today = new Date();
@@ -423,11 +509,44 @@ let accessToken = null;
 let tokenClient = null;
 
 // ══════════════════════════════════════
+//  GOOGLE OAUTH (1시간 토큰 캐싱)
+// ══════════════════════════════════════
+const TOKEN_KEY = 'hub_access_token';
+const TOKEN_EXP_KEY = 'hub_token_exp';
+const TOKEN_USER_KEY = 'hub_token_user';
+
+function saveToken(token, user) {
+  const exp = Date.now() + 60 * 60 * 1000; // 1시간
+  sessionStorage.setItem(TOKEN_KEY, token);
+  sessionStorage.setItem(TOKEN_EXP_KEY, String(exp));
+  sessionStorage.setItem(TOKEN_USER_KEY, JSON.stringify(user));
+}
+function loadToken() {
+  const token = sessionStorage.getItem(TOKEN_KEY);
+  const exp   = Number(sessionStorage.getItem(TOKEN_EXP_KEY) || 0);
+  const user  = JSON.parse(sessionStorage.getItem(TOKEN_USER_KEY) || 'null');
+  if(token && exp > Date.now()) return { token, user };
+  return null;
+}
+function clearToken() {
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_EXP_KEY);
+  sessionStorage.removeItem(TOKEN_USER_KEY);
+}
+
+// ══════════════════════════════════════
 //  GOOGLE OAUTH
 // ══════════════════════════════════════
 function initGoogleAuth() {
   if(typeof google === 'undefined') {
     setTimeout(initGoogleAuth, 500); return;
+  }
+  // 캐시된 토큰 확인
+  const cached = loadToken();
+  if(cached) {
+    accessToken = cached.token;
+    showApp(cached.user);
+    return;
   }
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: OAUTH_CLIENT_ID,
@@ -435,15 +554,19 @@ function initGoogleAuth() {
     callback: (resp) => {
       if(resp.error) { console.error(resp); return; }
       accessToken = resp.access_token;
-      // 사용자 정보 가져오기
       fetchUserInfo();
     }
   });
 }
 
 function handleGoogleLogin() {
-  if(!tokenClient) { alert('Google 인증 초기화 중입니다. 잠시 후 다시 시도해주세요.'); return; }
-  tokenClient.requestAccessToken({ prompt: 'consent' });
+  if(!tokenClient) {
+    // tokenClient가 없으면 다시 초기화
+    initGoogleAuth();
+    setTimeout(()=>{ if(tokenClient) tokenClient.requestAccessToken({ prompt: '' }); }, 600);
+    return;
+  }
+  tokenClient.requestAccessToken({ prompt: '' });
 }
 
 async function fetchUserInfo() {
@@ -452,6 +575,7 @@ async function fetchUserInfo() {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
     const user = await res.json();
+    saveToken(accessToken, user);
     showApp(user);
   } catch(e) {
     showApp({ name: '사용자', picture: '' });
@@ -474,6 +598,7 @@ function showApp(user) {
 function handleLogout() {
   if(accessToken) google.accounts.oauth2.revoke(accessToken);
   accessToken = null;
+  clearToken();
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').classList.remove('visible');
   allRequests = [];
@@ -814,50 +939,154 @@ function renderCalendar(){
 function prevMonth(){currentMonth--;if(currentMonth<0){currentMonth=11;currentYear--;}renderCalendar();}
 function nextMonth(){currentMonth++;if(currentMonth>11){currentMonth=0;currentYear++;}renderCalendar();}
 
+function clearArchiveFilter() {
+  ['arc-search','arc-filter-team','arc-filter-channel','arc-filter-assignee','arc-date-from','arc-date-to']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  renderArchive();
+}
+
 function renderArchive(){
   // 배포 완료된 채널 단위로 아카이브 생성
-  const archiveItems = [];
+  const allItems = [];
   allRequests.forEach(r => {
     if(!r.deployed) return;
-    // 발행일정 파싱
     const schedMap = {};
     (r.schedule||'').split(',').forEach(seg=>{
       const parts = seg.split(':');
       if(parts.length >= 2) schedMap[parts[0].trim()] = parts.slice(1).join(':').trim();
     });
-    // 담당자 파싱
     const assigneeList = (r.assignee||'').split(',').map(s=>s.trim());
-    // 배포 완료된 채널만 추출
-    r.deployed.split(',').forEach((seg, i) => {
+    r.deployed.split(',').forEach((seg) => {
       const [ch, val] = (seg+':').split(':');
       if(ch.trim() && val.trim() === 'true') {
-        archiveItems.push({
+        allItems.push({
           team:      r.team,
           project:   r.project,
+          rowIndex:  r._rowIndex,
           channel:   ch.trim(),
           date:      schedMap[ch.trim()] || r.deadline || '—',
           assignee:  assigneeList[r.channels.indexOf(ch.trim())] || r.assignee || '—',
           requester: r.requester,
-          status:    r.status,
         });
       }
     });
   });
 
-  document.getElementById('archive-count').textContent = archiveItems.length;
+  // 필터 드롭다운 옵션 업데이트 (최초 1회)
+  const teamSel = document.getElementById('arc-filter-team');
+  const assigneeSel = document.getElementById('arc-filter-assignee');
+  if(teamSel && teamSel.options.length <= 1) {
+    const teams = [...new Set(allItems.map(a=>a.team))];
+    teams.forEach(t => { const o = document.createElement('option'); o.value=t; o.textContent=t; teamSel.appendChild(o); });
+  }
+  if(assigneeSel && assigneeSel.options.length <= 1) {
+    const assignees = [...new Set(allItems.map(a=>a.assignee).filter(Boolean))];
+    assignees.forEach(a => { const o = document.createElement('option'); o.value=a; o.textContent=a; assigneeSel.appendChild(o); });
+  }
+
+  // 필터값 읽기
+  const q          = (document.getElementById('arc-search')?.value||'').toLowerCase();
+  const fTeam      = document.getElementById('arc-filter-team')?.value||'';
+  const fChannel   = document.getElementById('arc-filter-channel')?.value||'';
+  const fAssignee  = document.getElementById('arc-filter-assignee')?.value||'';
+  const fDateFrom  = document.getElementById('arc-date-from')?.value||'';
+  const fDateTo    = document.getElementById('arc-date-to')?.value||'';
+
+  // 필터 적용
+  const filtered = allItems.filter(a => {
+    if(q && !a.project.toLowerCase().includes(q) && !a.team.toLowerCase().includes(q) && !a.assignee.toLowerCase().includes(q)) return false;
+    if(fTeam    && a.team !== fTeam) return false;
+    if(fChannel && !a.channel.replace(/\s/g,'').includes(fChannel.replace(/\s/g,''))) return false;
+    if(fAssignee && a.assignee !== fAssignee) return false;
+    if(fDateFrom && a.date !== '—' && a.date < fDateFrom) return false;
+    if(fDateTo   && a.date !== '—' && a.date > fDateTo)   return false;
+    return true;
+  });
+
+  // 통계 업데이트
+  const igCount       = filtered.filter(a=>a.channel.includes('IG')||a.channel.includes('ig')).length;
+  const nlCount       = filtered.filter(a=>a.channel.includes('뉴스레터')).length;
+  const platformCount = filtered.filter(a=>a.channel.includes('배너')||a.channel.includes('플랫폼')).length;
+  const projectCount  = new Set(filtered.map(a=>a.project)).size;
+  document.getElementById('arc-stat-total').textContent    = filtered.length;
+  document.getElementById('arc-stat-ig').textContent       = igCount;
+  document.getElementById('arc-stat-nl').textContent       = nlCount;
+  document.getElementById('arc-stat-platform').textContent = platformCount;
+  document.getElementById('arc-stat-projects').textContent = projectCount;
+  document.getElementById('archive-count').textContent     = filtered.length;
+
   const tbody = document.getElementById('archive-tbody');
-  if(!archiveItems.length){
-    tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-faint);">배포 완료 체크된 항목이 없습니다</td></tr>';
+  if(!filtered.length){
+    tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-faint);">조건에 맞는 항목이 없습니다</td></tr>';
     return;
   }
-  tbody.innerHTML = archiveItems.map(a=>`<tr>
-    <td><span class="team-tag">${a.team}</span></td>
-    <td style="font-weight:500;font-size:13px;">${a.project}</td>
-    <td><span class="content-tag ${chType(a.channel)}">${a.channel}</span></td>
-    <td class="date-mono">${a.date}</td>
-    <td style="font-size:12px;">${a.assignee}</td>
-    <td style="font-size:12px;color:var(--text-muted);">@${a.requester}</td>
-  </tr>`).join('');
+
+  // 프로젝트별로 묶기
+  const grouped = {};
+  filtered.forEach(a => {
+    if(!grouped[a.project]) grouped[a.project] = { team: a.team, requester: a.requester, rowIndex: a.rowIndex, channels: [] };
+    grouped[a.project].channels.push(a);
+  });
+
+  let html = '';
+  Object.entries(grouped).forEach(([project, g]) => {
+    const chCount = g.channels.length;
+    const chTagsHtml = g.channels.map(c =>
+      `<span class="content-tag ${chType(c.channel)}">${c.channel}</span>`
+    ).join('');
+    const groupId = `ag_${g.rowIndex}`;
+    html += `
+      <tr style="cursor:pointer;background:var(--surface2);" onclick="toggleArchiveGroup('${groupId}')">
+        <td style="padding:12px 16px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span id="${groupId}_arrow" style="font-size:11px;color:var(--text-faint);transition:transform 0.2s;">▶</span>
+            <span class="team-tag">${g.team}</span>
+          </div>
+        </td>
+        <td style="padding:12px 16px;">
+          <span onclick="event.stopPropagation();openDetail('${g.rowIndex}')"
+            style="font-weight:600;font-size:13px;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:3px;">
+            ${project}
+          </span>
+        </td>
+        <td style="padding:12px 16px;">
+          <div style="display:flex;flex-wrap:wrap;gap:3px;">${chTagsHtml}</div>
+        </td>
+        <td style="padding:12px 16px;font-size:12px;color:var(--text-muted);">총 ${chCount}개 채널</td>
+        <td style="padding:12px 16px;font-size:12px;color:var(--text-muted);">@${g.requester}</td>
+      </tr>
+      <tr id="${groupId}" style="display:none;">
+        <td colspan="5" style="padding:0;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="background:#FAFAF8;">
+                <th style="padding:8px 16px 8px 48px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);font-weight:500;text-align:left;border-bottom:1px solid var(--border);">배포 채널</th>
+                <th style="padding:8px 16px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);font-weight:500;text-align:left;border-bottom:1px solid var(--border);">발행일</th>
+                <th style="padding:8px 16px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);font-weight:500;text-align:left;border-bottom:1px solid var(--border);">담당자</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${g.channels.map(c=>`
+                <tr style="border-bottom:1px solid var(--border);">
+                  <td style="padding:9px 16px 9px 48px;"><span class="content-tag ${chType(c.channel)}">${c.channel}</span></td>
+                  <td style="padding:9px 16px;font-family:var(--mono);font-size:12px;color:var(--text-muted);">${c.date}</td>
+                  <td style="padding:9px 16px;font-size:12px;">${c.assignee}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </td>
+      </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function toggleArchiveGroup(id) {
+  const row = document.getElementById(id);
+  const arrow = document.getElementById(id + '_arrow');
+  if(!row) return;
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : 'table-row';
+  if(arrow) arrow.style.transform = isOpen ? '' : 'rotate(90deg)';
 }
 
 function openDetail(rowIndex){
@@ -891,9 +1120,17 @@ function openDetail(rowIndex){
     const assignee=assigneeList[i]||'';
     const date=schedMap[ch]||'';
     const deployed=deployMap[ch]||false;
+    const memberOptions = TEAM_MEMBERS.map(m=>
+      `<option value="${m}" ${m===assignee?'selected':''}>${m}</option>`
+    ).join('');
     return `<tr>
       <td><span class="content-tag ${chType(ch)}">${ch}</span></td>
-      <td><input class="ch-input" id="a_${sid}" placeholder="담당자 이름" value="${assignee}"></td>
+      <td>
+        <select class="ch-input" id="a_${sid}" style="cursor:pointer;">
+          <option value="">— 선택 —</option>
+          ${memberOptions}
+        </select>
+      </td>
       <td><input class="ch-input date" id="d_${sid}" type="date" value="${date}"></td>
       <td style="text-align:center;">
         <label style="display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;">
@@ -952,9 +1189,68 @@ function openDetail(rowIndex){
         >${r.memo||''}</textarea>
       <div style="font-size:11px;color:var(--text-faint);margin-top:5px;">메모는 💾 저장 버튼을 누르면 함께 저장됩니다.</div>
     </div>
+    <div class="divider"></div>
+    <div class="field-group">
+      <div class="field-label" style="margin-bottom:8px;">👥 담당자 목록 관리</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;" id="member-tag-list">
+        ${TEAM_MEMBERS.map(m=>`
+          <span style="display:inline-flex;align-items:center;gap:4px;background:var(--surface2);
+            border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:12px;">
+            ${m}
+            <button onclick="removeMember('${m}')" style="border:none;background:none;cursor:pointer;
+              color:var(--text-faint);font-size:14px;line-height:1;padding:0;">×</button>
+          </span>`).join('')}
+      </div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="new-member-input" placeholder="이름 입력 후 추가"
+          style="flex:1;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border);
+          font-family:var(--font);font-size:12px;color:var(--text);"
+          onkeydown="if(event.key==='Enter')addMember()">
+        <button onclick="addMember()"
+          style="padding:7px 14px;border-radius:var(--radius);border:1px solid var(--accent);
+          background:var(--accent-light);color:var(--accent);font-family:var(--font);
+          font-size:12px;font-weight:600;cursor:pointer;">+ 추가</button>
+      </div>
+    </div>
   `;
   document.getElementById('detail-overlay').classList.add('open');
 }
+function addMember() {
+  const input = document.getElementById('new-member-input');
+  const name = input?.value.trim();
+  if(!name) return;
+  if(TEAM_MEMBERS.includes(name)) { input.value=''; return; }
+  TEAM_MEMBERS.push(name);
+  saveTeamMembers();
+  input.value = '';
+  // 태그 목록 새로고침
+  const tagList = document.getElementById('member-tag-list');
+  if(tagList) tagList.outerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;" id="member-tag-list">
+    ${TEAM_MEMBERS.map(m=>`
+      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--surface2);
+        border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:12px;">
+        ${m}
+        <button onclick="removeMember('${m}')" style="border:none;background:none;cursor:pointer;
+          color:var(--text-faint);font-size:14px;line-height:1;padding:0;">×</button>
+      </span>`).join('')}
+  </div>`;
+}
+
+function removeMember(name) {
+  TEAM_MEMBERS = TEAM_MEMBERS.filter(m => m !== name);
+  saveTeamMembers();
+  const tagList = document.getElementById('member-tag-list');
+  if(tagList) tagList.outerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;" id="member-tag-list">
+    ${TEAM_MEMBERS.map(m=>`
+      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--surface2);
+        border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:12px;">
+        ${m}
+        <button onclick="removeMember('${m}')" style="border:none;background:none;cursor:pointer;
+          color:var(--text-faint);font-size:14px;line-height:1;padding:0;">×</button>
+      </span>`).join('')}
+  </div>`;
+}
+
 function closePanel(){ document.getElementById('detail-overlay').classList.remove('open'); }
 
 // ══════════════════════════════════════
