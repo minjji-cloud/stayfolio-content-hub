@@ -125,9 +125,13 @@
   .badge.review::before{background:var(--amber);}
   .team-tag{display:inline-block;font-size:11px;font-weight:700;color:var(--text-muted);white-space:nowrap;}
   .content-tag{display:inline-block;font-size:10px;font-weight:700;white-space:nowrap;margin-right:3px;}
-  .content-tag.ig{color:var(--accent);}
-  .content-tag.nl{color:var(--green);}
-  .content-tag.platform{color:var(--purple);}
+  .content-tag.ch-feed    {color:#3EB8BB;}  /* IG 피드 — 청록 */
+  .content-tag.ch-story   {color:#3EB1BB;}  /* IG 스토리 — 청록2 */
+  .content-tag.ch-reels   {color:#6AA2CD;}  /* IG 릴스 — 하늘 */
+  .content-tag.ch-thread  {color:#B43C8A;}  /* IG 쓰레드 — 핑크 */
+  .content-tag.ch-nl      {color:#712B82;}  /* 뉴스레터 — 보라 */
+  .content-tag.ch-platform{color:#5F2B82;}  /* 플랫폼 — 진보라 */
+  .content-tag.ch-etc     {color:#7A776F;}  /* 기타 */
   .tooltip-tag{display:inline-block;font-size:10px;padding:1px 5px;border-radius:4px;background:var(--red-light);color:var(--red);font-weight:600;margin-left:4px;}
   .date-mono{font-family:var(--mono);font-size:12px;color:var(--text-muted);}
   .action-link{font-size:12px;color:var(--accent);cursor:pointer;}
@@ -152,9 +156,13 @@
   .cal-date{font-size:12px;font-family:var(--mono);font-weight:500;color:var(--text-muted);margin-bottom:4px;}
   .cal-date.today-num{background:var(--accent);color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;margin-bottom:4px;}
   .cal-event{font-size:10px;padding:2px 6px;border-radius:4px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;font-weight:500;border-left:2px solid;}
-  .cal-event.ig{background:var(--accent-light);color:var(--accent);border-color:var(--accent);}
-  .cal-event.nl{background:var(--green-light);color:var(--green);border-color:var(--green);}
-  .cal-event.platform{background:var(--purple-light);color:var(--purple);border-color:var(--purple);}
+  .cal-event.ch-feed    {background:#E8F8F8;color:#3EB8BB;border-color:#3EB8BB;}
+  .cal-event.ch-story   {background:#E8F7F8;color:#3EB1BB;border-color:#3EB1BB;}
+  .cal-event.ch-reels   {background:#EAF4FB;color:#6AA2CD;border-color:#6AA2CD;}
+  .cal-event.ch-thread  {background:#FBE8F4;color:#B43C8A;border-color:#B43C8A;}
+  .cal-event.ch-nl      {background:#F3E8F7;color:#712B82;border-color:#712B82;}
+  .cal-event.ch-platform{background:#EFE8F7;color:#5F2B82;border-color:#5F2B82;}
+  .cal-event.ch-etc     {background:#F0EDE7;color:#7A776F;border-color:#C8C4BB;}
 
   /* Detail panel */
   .overlay{display:none;position:fixed;inset:0;background:rgba(20,18,14,0.5);z-index:100;align-items:flex-start;justify-content:flex-end;}
@@ -337,7 +345,7 @@
             <button class="filter-chip" onclick="clearDateFilter()" style="font-size:11px;padding:4px 10px;">초기화</button>
           </div>
           <div class="table-wrap">
-            <table><thead><tr><th>요청팀</th><th>프로젝트명</th><th>요청자</th><th>기한</th><th>채널</th><th>킥오프</th><th>상태</th><th>배정현황</th><th></th></tr></thead>
+            <table><thead><tr><th>요청팀</th><th>프로젝트명</th><th>요청자</th><th>기한</th><th>채널</th><th>협업 내용</th><th>상태</th><th>배정현황</th><th></th></tr></thead>
             <tbody id="req-tbody"></tbody></table>
           </div>
         </div>
@@ -348,10 +356,13 @@
             <button class="btn" style="width:32px;height:32px;padding:0;justify-content:center;" onclick="prevMonth()">←</button>
             <h3 id="cal-label">2026년 6월</h3>
             <button class="btn" style="width:32px;height:32px;padding:0;justify-content:center;" onclick="nextMonth()">→</button>
-            <div style="margin-left:auto;display:flex;gap:10px;font-size:12px;color:var(--text-muted);">
-              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--accent-light);border-left:3px solid var(--accent);"></span> IG</span>
-              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--green-light);border-left:3px solid var(--green);"></span> 뉴스레터</span>
-              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--purple-light);border-left:3px solid var(--purple);"></span> 플랫폼</span>
+            <div style="margin-left:auto;display:flex;gap:8px;font-size:11px;color:var(--text-muted);flex-wrap:wrap;">
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#E8F8F8;border-left:3px solid #3EB8BB;"></span> 피드</span>
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#E8F7F8;border-left:3px solid #3EB1BB;"></span> 스토리</span>
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#EAF4FB;border-left:3px solid #6AA2CD;"></span> 릴스</span>
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#FBE8F4;border-left:3px solid #B43C8A;"></span> 쓰레드</span>
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#F3E8F7;border-left:3px solid #712B82;"></span> 뉴스레터</span>
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#EFE8F7;border-left:3px solid #5F2B82;"></span> 플랫폼</span>
             </div>
           </div>
           <div class="cal-grid">
@@ -367,7 +378,7 @@
         <div class="view" id="view-archive">
           <div class="table-wrap">
             <div class="table-header"><h3>🗂️ 발행 완료 아카이브</h3><span style="font-size:12px;color:var(--text-muted);">총 <strong id="archive-count">0</strong>건</span></div>
-            <table><thead><tr><th>요청팀</th><th>프로젝트명</th><th>채널</th><th>기한</th><th>담당자</th><th>요청자</th></tr></thead>
+            <table><thead><tr><th>요청팀</th><th>프로젝트명</th><th>배포 채널</th><th>발행일</th><th>담당자</th><th>요청자</th></tr></thead>
             <tbody id="archive-tbody"></tbody></table>
           </div>
         </div>
@@ -406,7 +417,8 @@ const COL = { ID:0,TEAM:1,REQUESTER:2,PROJECT:3,PROMO_DATE:4,DEADLINE:5,CHANNELS
 
 let allRequests = [];
 let currentFilter = 'all';
-let currentYear = 2026, currentMonth = 5;
+const _today = new Date();
+let currentYear = _today.getFullYear(), currentMonth = _today.getMonth();
 let accessToken = null;
 let tokenClient = null;
 
@@ -501,7 +513,7 @@ async function loadFromSheets() {
   if(!accessToken) { alert('먼저 Google 로그인이 필요합니다.'); return; }
   setConnStatus('loading');
 
-  const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!A2:O500`);
+  const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!A2:P500`);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}`;
   try {
     const res = await fetch(url, { headers: sheetsHeaders() });
@@ -524,7 +536,8 @@ async function loadFromSheets() {
       assignee:  r[COL.ASSIGNEE]   || '',
       schedule:  r[COL.SCHEDULE]   || '',
       createdAt: r[COL.CREATED_AT] || '',
-      deployed:  r[14]             || '', // O열 (0-based index 14)
+      deployed:  r[14]             || '', // O열
+      memo:      r[15]             || '', // P열
       _rowIndex: rows.indexOf(r) + 2,
     }));
 
@@ -563,16 +576,17 @@ async function saveChannelData(rowIndex) {
   const assigneeStr = [...new Set(assignees)].join(',');
   const deployedStr = deployParts.join(',');
   const newStatus   = document.getElementById('status-select')?.value || r.status;
+  const memoStr     = document.getElementById('panel-memo')?.value.trim() || '';
 
-  // Sheets K=상태, L=담당자, M=발행일정, O=배포현황
-  const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!K${r._rowIndex}:O${r._rowIndex}`);
+  // Sheets K=상태, L=담당자, M=발행일정, O=배포현황, P=메모
+  const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!K${r._rowIndex}:P${r._rowIndex}`);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}?valueInputOption=RAW`;
 
   try {
     const res = await fetch(url, {
       method: 'PUT',
       headers: sheetsHeaders(),
-      body: JSON.stringify({ values: [[statusLabel(newStatus), assigneeStr, scheduleStr, '', deployedStr]] })
+      body: JSON.stringify({ values: [[statusLabel(newStatus), assigneeStr, scheduleStr, '', deployedStr, memoStr]] })
     });
     if(!res.ok) throw new Error((await res.json()).error?.message || `HTTP ${res.status}`);
 
@@ -581,6 +595,7 @@ async function saveChannelData(rowIndex) {
     r.assignee = assigneeStr;
     r.schedule = scheduleStr;
     r.deployed = deployedStr;
+    r.memo     = memoStr;
 
     result.style.display = 'block';
     result.className = 'save-result ok';
@@ -611,10 +626,15 @@ function setConnStatus(s){
   lbl.textContent=s==='connected'?'연동됨':s==='error'?'오류':'연결 중...';
 }
 function chType(ch){
-  if(!ch) return 'ig';
-  if(ch.includes('IG')||ch.includes('ig')) return 'ig';
-  if(ch.includes('뉴스레터')) return 'nl';
-  return 'platform';
+  if(!ch) return 'ch-etc';
+  if(ch.includes('피드'))    return 'ch-feed';
+  if(ch.includes('스토리'))  return 'ch-story';
+  if(ch.includes('릴스'))    return 'ch-reels';
+  if(ch.includes('쓰레드')||ch.includes('스레드')||ch.includes('Thread')) return 'ch-thread';
+  if(ch.includes('뉴스레터')) return 'ch-nl';
+  if(ch.includes('배너')||ch.includes('플랫폼')||ch.includes('메인')) return 'ch-platform';
+  if(ch.includes('IG')||ch.includes('ig')) return 'ch-feed';
+  return 'ch-etc';
 }
 
 function switchView(v){
@@ -698,19 +718,56 @@ function renderRequests(){
   tbody.innerHTML=list.map(r=>{
     const chHtml=r.channels.slice(0,3).map(c=>`<span class="content-tag ${chType(c)}">${c}</span>`).join('')
       +(r.channels.length>3?`<span style="font-size:10px;color:var(--text-faint);">+${r.channels.length-3}</span>`:'');
-    const assigned=r.assignee?r.channels.length+'ch 배정':'<span style="color:var(--red);font-size:11px;">미배정</span>';
+    const totalCh = r.channels.length;
+    const assignedCh = r.assignee ? r.assignee.split(',').filter(a=>a.trim()).length : 0;
+    const assigned = `<span style="white-space:nowrap;font-size:11px;color:var(--text-muted);">
+      ${totalCh}개 중 <strong style="color:#2B5BFF;font-weight:700;">${assignedCh}개</strong> 배정
+    </span>`;
+    const detailPreview = r.detail ? r.detail.slice(0,30)+(r.detail.length>30?'…':'') : '—';
     return `<tr style="cursor:pointer" onclick="openDetail('${r._rowIndex}')">
       <td><span class="team-tag">${r.team}</span></td>
       <td style="font-weight:500;font-size:13px;">${r.project}${!r.assignee&&r.status!=='published'?'<span class="tooltip-tag">미배정</span>':''}</td>
       <td style="font-size:12px;color:var(--text-muted);">@${r.requester}</td>
       <td class="date-mono">${r.deadline}</td>
       <td><div style="display:flex;flex-wrap:wrap;gap:2px;">${chHtml}</div></td>
-      <td><span class="badge ${r.kickoff==='진행완료'?'published':'waiting'}" style="font-size:10px;">${r.kickoff}</span></td>
+      <td style="font-size:11px;color:var(--text-muted);max-width:160px;">${detailPreview}</td>
       <td><span class="badge ${r.status}">${statusLabel(r.status)}</span></td>
-      <td style="font-size:12px;">${assigned}</td>
+      <td style="font-size:11px;">${assigned}</td>
       <td><span class="action-link">배정 →</span></td>
     </tr>`;
   }).join('');
+}
+
+// ── 한국 공휴일 (고정 + 2026년 음력 공휴일) ──
+const HOLIDAYS = {
+  // 고정 공휴일
+  '01-01': '신정',
+  '03-01': '삼일절',
+  '05-05': '어린이날',
+  '06-06': '현충일',
+  '08-15': '광복절',
+  '10-03': '개천절',
+  '10-09': '한글날',
+  '12-25': '크리스마스',
+  // 2026년 음력 기반 공휴일
+  '2026-01-28': '설날 연휴',
+  '2026-01-29': '설날',
+  '2026-01-30': '설날 연휴',
+  '2026-05-24': '부처님오신날',
+  '2026-09-24': '추석 연휴',
+  '2026-09-25': '추석',
+  '2026-09-26': '추석 연휴',
+  // 2026년 대체공휴일
+  '2026-03-02': '삼일절 대체공휴일',
+  '2026-05-06': '어린이날 대체공휴일',
+};
+
+function isHoliday(year, month, day) {
+  const mm = String(month+1).padStart(2,'0');
+  const dd = String(day).padStart(2,'0');
+  const fullKey = `${year}-${mm}-${dd}`;
+  const shortKey = `${mm}-${dd}`;
+  return HOLIDAYS[fullKey] || HOLIDAYS[shortKey] || null;
 }
 
 function renderCalendar(){
@@ -736,7 +793,16 @@ function renderCalendar(){
   for(let i=0;i<firstDay;i++) body.innerHTML+=`<div class="cal-cell other-month"></div>`;
   for(let d=1;d<=daysInMonth;d++){
     const isToday=today.getFullYear()===currentYear&&today.getMonth()===currentMonth&&today.getDate()===d;
-    const dateHtml=isToday?`<div class="cal-date today-num">${d}</div>`:`<div class="cal-date">${d}</div>`;
+    const isSun=new Date(currentYear,currentMonth,d).getDay()===0;
+    const holiday=isHoliday(currentYear,currentMonth,d);
+    const isRed=isSun||!!holiday;
+    let dateHtml;
+    if(isToday){
+      dateHtml=`<div class="cal-date today-num" ${isRed?'style="background:var(--red);"':''}>${d}</div>`;
+    } else {
+      dateHtml=`<div class="cal-date" style="${isRed?'color:var(--red);font-weight:700;':''}" title="${holiday||''}">${d}${holiday?`<span style="font-size:8px;display:block;color:var(--red);line-height:1;margin-top:1px;font-weight:500;">${holiday}</span>`:''}
+      </div>`;
+    }
     const evHtml=(events[d]||[]).slice(0,3).map(e=>
       `<div class="cal-event ${chType(e.ch)}" onclick="openDetail('${e.rowIndex}')" title="${e.project} - ${e.ch}">${e.project.slice(0,10)} - ${e.ch}</div>`
     ).join('')+(events[d]&&events[d].length>3?`<div style="font-size:10px;color:var(--text-faint)">+${events[d].length-3}개</div>`:'');
@@ -749,17 +815,48 @@ function prevMonth(){currentMonth--;if(currentMonth<0){currentMonth=11;currentYe
 function nextMonth(){currentMonth++;if(currentMonth>11){currentMonth=0;currentYear++;}renderCalendar();}
 
 function renderArchive(){
-  const archived=allRequests.filter(r=>r.status==='published');
-  document.getElementById('archive-count').textContent=archived.length;
-  const tbody=document.getElementById('archive-tbody');
-  if(!archived.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-faint);">발행 완료 항목이 없습니다</td></tr>';return;}
-  tbody.innerHTML=archived.map(r=>`<tr>
-    <td><span class="team-tag">${r.team}</span></td>
-    <td style="font-weight:500;font-size:13px;">${r.project}</td>
-    <td><div style="display:flex;flex-wrap:wrap;gap:3px;">${r.channels.map(c=>`<span class="content-tag ${chType(c)}">${c}</span>`).join('')}</div></td>
-    <td class="date-mono">${r.deadline}</td>
-    <td style="font-size:12px;">${r.assignee||'—'}</td>
-    <td style="font-size:12px;color:var(--text-muted);">@${r.requester}</td>
+  // 배포 완료된 채널 단위로 아카이브 생성
+  const archiveItems = [];
+  allRequests.forEach(r => {
+    if(!r.deployed) return;
+    // 발행일정 파싱
+    const schedMap = {};
+    (r.schedule||'').split(',').forEach(seg=>{
+      const parts = seg.split(':');
+      if(parts.length >= 2) schedMap[parts[0].trim()] = parts.slice(1).join(':').trim();
+    });
+    // 담당자 파싱
+    const assigneeList = (r.assignee||'').split(',').map(s=>s.trim());
+    // 배포 완료된 채널만 추출
+    r.deployed.split(',').forEach((seg, i) => {
+      const [ch, val] = (seg+':').split(':');
+      if(ch.trim() && val.trim() === 'true') {
+        archiveItems.push({
+          team:      r.team,
+          project:   r.project,
+          channel:   ch.trim(),
+          date:      schedMap[ch.trim()] || r.deadline || '—',
+          assignee:  assigneeList[r.channels.indexOf(ch.trim())] || r.assignee || '—',
+          requester: r.requester,
+          status:    r.status,
+        });
+      }
+    });
+  });
+
+  document.getElementById('archive-count').textContent = archiveItems.length;
+  const tbody = document.getElementById('archive-tbody');
+  if(!archiveItems.length){
+    tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-faint);">배포 완료 체크된 항목이 없습니다</td></tr>';
+    return;
+  }
+  tbody.innerHTML = archiveItems.map(a=>`<tr>
+    <td><span class="team-tag">${a.team}</span></td>
+    <td style="font-weight:500;font-size:13px;">${a.project}</td>
+    <td><span class="content-tag ${chType(a.channel)}">${a.channel}</span></td>
+    <td class="date-mono">${a.date}</td>
+    <td style="font-size:12px;">${a.assignee}</td>
+    <td style="font-size:12px;color:var(--text-muted);">@${a.requester}</td>
   </tr>`).join('');
 }
 
@@ -824,8 +921,11 @@ function openDetail(rowIndex){
       <div class="field-group"><div class="field-label">프로모션 오픈</div><div style="font-family:var(--mono);font-size:12px;">${r.promoDate||'—'}</div></div>
       <div class="field-group"><div class="field-label">작업 기한</div><div style="font-family:var(--mono);font-size:12px;">${r.deadline||'—'}</div></div>
     </div>
-    <div class="field-group"><div class="field-label">킥오프 미팅</div><div>${r.kickoff}</div></div>
-    <div class="field-group"><div class="field-label">콘텐츠 검수</div><div>${r.review}</div></div>
+    <div class="field-group">
+      <div class="field-label">협업 세부 내용</div>
+      <div style="white-space:pre-line;font-size:12px;color:var(--text-muted);background:var(--surface2);padding:12px;border-radius:10px;border:1px solid var(--border);line-height:1.8;">${r.detail||'—'}</div>
+    </div>
+    <div class="field-group"><div class="field-label">콘텐츠 검수</div><div style="font-size:13px;">${r.review||'—'}</div></div>
     <div class="divider"></div>
     <div class="assign-section">
       <h4>
@@ -841,8 +941,16 @@ function openDetail(rowIndex){
     </div>
     <div class="divider"></div>
     <div class="field-group">
-      <div class="field-label">협업 세부 내용</div>
-      <div style="white-space:pre-line;font-size:12px;color:var(--text-muted);background:var(--surface2);padding:12px;border-radius:10px;border:1px solid var(--border);line-height:1.8;">${r.detail||'—'}</div>
+      <div class="field-label" style="margin-bottom:6px;">📝 메모</div>
+      <textarea id="panel-memo" rows="4"
+        style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);
+        font-family:var(--font);font-size:12px;color:var(--text);background:var(--surface);
+        resize:vertical;line-height:1.7;transition:border-color 0.15s;"
+        placeholder="내부 전달 사항, 참고 링크, 수정 요청 등 자유롭게 메모하세요..."
+        onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3px rgba(43,91,255,0.08)'"
+        onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'"
+        >${r.memo||''}</textarea>
+      <div style="font-size:11px;color:var(--text-faint);margin-top:5px;">메모는 💾 저장 버튼을 누르면 함께 저장됩니다.</div>
     </div>
   `;
   document.getElementById('detail-overlay').classList.add('open');
