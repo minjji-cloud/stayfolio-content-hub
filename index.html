@@ -312,8 +312,22 @@
             <div class="stat-card"><div class="stat-label">발행 완료</div><div class="stat-value green" id="s-done">—</div><div class="stat-sub">이번 달</div></div>
             <div class="stat-card"><div class="stat-label">누락 위험</div><div class="stat-value red" id="s-risk">—</div><div class="stat-sub">미배정 건</div></div>
           </div>
+          <!-- D-1 알림판 -->
+          <div id="deadline-alert-wrap" style="margin-bottom:16px;display:none;"></div>
+          <!-- 최근 협업 요청 -->
           <div class="table-wrap">
-            <div class="table-header"><h3>📥 최근 협업 요청</h3><button class="btn" onclick="switchView('requests')">전체 보기</button></div>
+            <div class="table-header">
+              <h3>📥 최근 협업 요청</h3>
+              <select id="dash-period-filter" onchange="renderDashboard()"
+                style="font-family:var(--font);font-size:12px;padding:5px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">
+                <option value="1">최근 1개월</option>
+                <option value="3">최근 3개월</option>
+                <option value="6" selected>최근 6개월</option>
+                <option value="9">최근 9개월</option>
+                <option value="12">최근 1년</option>
+              </select>
+              <button class="btn" onclick="switchView('requests')">전체 보기</button>
+            </div>
             <table><thead><tr><th>요청팀</th><th>프로젝트명</th><th>요청자</th><th>작업기한</th><th>상태</th><th></th></tr></thead>
             <tbody id="dash-tbody"><tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-faint);">로그인 후 동기화하면 요청서가 표시됩니다</td></tr></tbody></table>
           </div>
@@ -797,20 +811,91 @@ function updateDeployBadge(checkbox, sid) {
     badge.style.color = 'var(--text-faint)';
   }
 }
+// ── 날짜 유틸 ──
+const DAY_KO = ['일','월','화','수','목','금','토'];
+function formatDateWithDay(dateStr) {
+  if(!dateStr || dateStr === '—') return dateStr;
+  const d = new Date(dateStr);
+  if(isNaN(d)) return dateStr;
+  const day = DAY_KO[d.getDay()];
+  return `${dateStr} (${day})`;
+}
+function stripAt(str) { return (str||'').replace(/^@/, ''); }
+
 function renderDashboard(){
   document.getElementById('s-progress').textContent=allRequests.filter(r=>r.status==='in-progress').length;
   document.getElementById('s-review').textContent=allRequests.filter(r=>r.status==='review').length;
   document.getElementById('s-done').textContent=allRequests.filter(r=>r.status==='published').length;
   document.getElementById('s-risk').textContent=allRequests.filter(r=>r.status==='waiting'&&!r.assignee).length;
-  const tbody=document.getElementById('dash-tbody');
+
+  // ── D-1 알림판 ──
+  const alertWrap = document.getElementById('deadline-alert-wrap');
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+  const alerts = [];
+  allRequests.forEach(r => {
+    if(!r.schedule) return;
+    r.schedule.split(',').forEach(seg => {
+      const parts = seg.split(':');
+      if(parts.length < 2) return;
+      const ch = parts[0].trim();
+      const dt = parts.slice(1).join(':').trim();
+      if(dt === tomorrowStr) {
+        const assigneeList = (r.assignee||'').split(',').map(s=>s.trim());
+        const idx = r.channels.indexOf(ch);
+        const assignee = assigneeList[idx] || r.assignee || '담당자';
+        alerts.push({ project: r.project, channel: ch, assignee, date: dt, rowIndex: r._rowIndex });
+      }
+    });
+  });
+
+  if(alerts.length) {
+    alertWrap.style.display = 'block';
+    alertWrap.innerHTML = `
+      <div style="background:linear-gradient(135deg,#FFF4D6 0%,#FCEAEA 100%);border:1px solid #F0D080;border-radius:var(--radius-lg);padding:16px 20px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">🔔</span>
+          <span style="font-size:13px;font-weight:700;color:#633806;">내일 배포 예정 — 확인이 필요해요!</span>
+          <span style="margin-left:auto;font-size:11px;font-family:var(--mono);color:var(--amber);">D-1 · ${tomorrowStr}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${alerts.map(a=>`
+            <div onclick="openDetail('${a.rowIndex}')" style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:10px;padding:10px 14px;cursor:pointer;border:1px solid #F0D080;transition:all 0.15s;"
+              onmouseover="this.style.borderColor='#EF9F27'" onmouseout="this.style.borderColor='#F0D080'">
+              <span class="content-tag ${chType(a.channel)}" style="flex-shrink:0;">${a.channel}</span>
+              <span style="font-size:13px;font-weight:600;flex:1;">${a.project}</span>
+              <span style="font-size:12px;color:var(--text-muted);">
+                담당자 <strong style="color:var(--text);">${a.assignee}</strong>님, 제작은 완료하셨나요? 배포 일정을 놓치지 마세요!
+              </span>
+              <span style="font-size:11px;color:var(--amber);white-space:nowrap;">→ 확인</span>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  } else {
+    alertWrap.style.display = 'none';
+  }
+
+  // ── 기간 필터 적용 ──
+  const months = parseInt(document.getElementById('dash-period-filter')?.value || '6');
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - months);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+
+  const tbody = document.getElementById('dash-tbody');
   if(!allRequests.length){
     tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-faint);">🔄 동기화 버튼을 눌러주세요</td></tr>'; return;
   }
-  tbody.innerHTML=allRequests.slice(0,6).map(r=>`<tr style="cursor:pointer" onclick="openDetail('${r._rowIndex}')">
+  const filtered = allRequests.filter(r => !r.createdAt || r.createdAt >= cutoffStr);
+  if(!filtered.length){
+    tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-faint);">해당 기간에 요청서가 없습니다</td></tr>'; return;
+  }
+  tbody.innerHTML=filtered.map(r=>`<tr style="cursor:pointer" onclick="openDetail('${r._rowIndex}')">
     <td><span class="team-tag">${r.team}</span></td>
     <td style="font-weight:500;font-size:13px;">${r.project}</td>
-    <td style="font-size:12px;color:var(--text-muted);">@${r.requester}</td>
-    <td class="date-mono">${r.deadline}</td>
+    <td style="font-size:12px;color:var(--text-muted);">${stripAt(r.requester)}</td>
+    <td class="date-mono" style="white-space:nowrap;">${formatDateWithDay(r.deadline)}</td>
     <td><span class="badge ${r.status}">${statusLabel(r.status)}</span></td>
     <td><span class="action-link">상세 →</span></td>
   </tr>`).join('');
@@ -852,8 +937,8 @@ function renderRequests(){
     return `<tr style="cursor:pointer" onclick="openDetail('${r._rowIndex}')">
       <td><span class="team-tag">${r.team}</span></td>
       <td style="font-weight:500;font-size:13px;">${r.project}${!r.assignee&&r.status!=='published'?'<span class="tooltip-tag">미배정</span>':''}</td>
-      <td style="font-size:12px;color:var(--text-muted);">@${r.requester}</td>
-      <td class="date-mono">${r.deadline}</td>
+      <td style="font-size:12px;color:var(--text-muted);">${stripAt(r.requester)}</td>
+      <td class="date-mono" style="white-space:nowrap;">${formatDateWithDay(r.deadline)}</td>
       <td><div style="display:flex;flex-wrap:wrap;gap:2px;">${chHtml}</div></td>
       <td style="font-size:11px;color:var(--text-muted);max-width:160px;">${detailPreview}</td>
       <td><span class="badge ${r.status}">${statusLabel(r.status)}</span></td>
@@ -1045,7 +1130,7 @@ function renderArchive(){
         </td>
         <td style="padding:12px 16px;">
           <span onclick="event.stopPropagation();openDetail('${g.rowIndex}')"
-            style="font-weight:600;font-size:13px;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:3px;">
+            style="font-weight:600;font-size:13px;color:var(--text);cursor:pointer;text-decoration:underline;text-underline-offset:3px;">
             ${project}
           </span>
         </td>
@@ -1053,7 +1138,7 @@ function renderArchive(){
           <div style="display:flex;flex-wrap:wrap;gap:3px;">${chTagsHtml}</div>
         </td>
         <td style="padding:12px 16px;font-size:12px;color:var(--text-muted);">총 ${chCount}개 채널</td>
-        <td style="padding:12px 16px;font-size:12px;color:var(--text-muted);">@${g.requester}</td>
+        <td style="padding:12px 16px;font-size:12px;color:var(--text-muted);">${stripAt(g.requester)}</td>
       </tr>
       <tr id="${groupId}" style="display:none;">
         <td colspan="5" style="padding:0;">
@@ -1069,7 +1154,7 @@ function renderArchive(){
               ${g.channels.map(c=>`
                 <tr style="border-bottom:1px solid var(--border);">
                   <td style="padding:9px 16px 9px 48px;"><span class="content-tag ${chType(c.channel)}">${c.channel}</span></td>
-                  <td style="padding:9px 16px;font-family:var(--mono);font-size:12px;color:var(--text-muted);">${c.date}</td>
+                  <td style="padding:9px 16px;font-family:var(--mono);font-size:12px;color:var(--text-muted);white-space:nowrap;">${formatDateWithDay(c.date)}</td>
                   <td style="padding:9px 16px;font-size:12px;">${c.assignee}</td>
                 </tr>`).join('')}
             </tbody>
@@ -1093,7 +1178,7 @@ function openDetail(rowIndex){
   const r=allRequests.find(x=>x._rowIndex==rowIndex);
   if(!r) return;
   document.getElementById('panel-title').textContent=r.project;
-  document.getElementById('panel-meta').textContent=`${r.team} · @${r.requester} · ${r.createdAt}`;
+  document.getElementById('panel-meta').textContent=`${r.team} · ${stripAt(r.requester)} · ${r.createdAt}`;
 
   // 기존 발행일정 파싱 ("IG피드:2026-06-02,뉴스레터:2026-06-03")
   const schedMap={};
@@ -1156,7 +1241,7 @@ function openDetail(rowIndex){
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div class="field-group"><div class="field-label">프로모션 오픈</div><div style="font-family:var(--mono);font-size:12px;">${r.promoDate||'—'}</div></div>
-      <div class="field-group"><div class="field-label">작업 기한</div><div style="font-family:var(--mono);font-size:12px;">${r.deadline||'—'}</div></div>
+      <div class="field-group"><div class="field-label">작업 기한</div><div style="font-family:var(--mono);font-size:12px;">${formatDateWithDay(r.deadline)||'—'}</div></div>
     </div>
     <div class="field-group">
       <div class="field-label">협업 세부 내용</div>
