@@ -871,31 +871,31 @@ function renderDashboard(){
 
   if(alerts.length) {
     alertWrap.innerHTML = `
-      <div style="background:linear-gradient(135deg,#FFF4D6 0%,#FCEAEA 100%);border:1px solid #F0D080;border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:4px;">
+      <div style="background:linear-gradient(135deg,#E8F8F8 0%,#EAF4FB 35%,#F0EBFF 70%,#F3E8F7 100%);border:1px solid #C8E8E8;border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:4px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
           <span style="font-size:18px;">🔔</span>
-          <span style="font-size:13px;font-weight:700;color:#633806;">배포 일정 알림 — 확인이 필요해요!</span>
-          <span style="margin-left:auto;font-size:11px;font-family:var(--mono);color:var(--text-faint);">오늘 ${todayStr}</span>
+          <span style="font-size:13px;font-weight:700;color:#3B6B7A;">배포 일정 알림 — 확인이 필요해요!</span>
+          <span style="margin-left:auto;font-size:11px;font-family:var(--mono);color:#6AA2CD;">오늘 ${todayStr}</span>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           ${alerts.map(a=>`
-            <div onclick="openDetail('${a.rowIndex}')" style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:10px;padding:10px 14px;cursor:pointer;border:1px solid ${a.isToday?'#F0B8B8':'#F0D080'};transition:all 0.15s;"
-              onmouseover="this.style.borderColor='${a.isToday?'var(--red)':'#EF9F27'}'" onmouseout="this.style.borderColor='${a.isToday?'#F0B8B8':'#F0D080'}'">
-              <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap;background:${a.isToday?'var(--red-light)':'var(--amber-light)'};color:${a.isToday?'var(--red)':'var(--amber)'};">${a.dLabel}</span>
+            <div onclick="openDetail('${a.rowIndex}')" style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.85);border-radius:10px;padding:10px 14px;cursor:pointer;border:1px solid ${a.isToday?'#C8A0C0':'#A8D4D8'};transition:all 0.15s;backdrop-filter:blur(4px);"
+              onmouseover="this.style.borderColor='${a.isToday?'#B43C8A':'#3EB8BB'}';this.style.background='rgba(255,255,255,0.98)'" onmouseout="this.style.borderColor='${a.isToday?'#C8A0C0':'#A8D4D8'}';this.style.background='rgba(255,255,255,0.85)'">
+              <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap;background:${a.isToday?'#F3E8F7':'#E8F8F8'};color:${a.isToday?'#B43C8A':'#3EB8BB'};">${a.dLabel}</span>
               <span class="content-tag ${chType(a.channel)}" style="flex-shrink:0;">${a.channel}</span>
               <span style="font-size:13px;font-weight:600;flex:1;">${a.project}</span>
               <span style="font-size:12px;color:var(--text-muted);">담당자 <strong style="color:var(--text);">${a.assignee}</strong>님, 제작은 완료하셨나요? 배포 일정을 놓치지 마세요!</span>
-              <span style="font-size:11px;color:${a.isToday?'var(--red)':'var(--amber)'};white-space:nowrap;">→ 확인</span>
+              <span style="font-size:11px;color:${a.isToday?'#B43C8A':'#3EB8BB'};white-space:nowrap;">→ 확인</span>
             </div>`).join('')}
         </div>
       </div>`;
   } else {
     alertWrap.innerHTML = `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 20px;display:flex;align-items:center;gap:10px;">
+      <div style="background:linear-gradient(135deg,#E8F8F8 0%,#EAF4FB 50%,#F0EBFF 100%);border:1px solid #C8E8E8;border-radius:var(--radius-lg);padding:14px 20px;display:flex;align-items:center;gap:10px;">
         <span style="font-size:16px;">✅</span>
         <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text);">오늘·내일 배포 예정 없음</div>
-          <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">발행 캘린더에 D-Day, D-1 해당 항목이 없어요. 오늘: ${todayStr}</div>
+          <div style="font-size:13px;font-weight:600;color:#3B6B7A;">오늘·내일 배포 예정 없음</div>
+          <div style="font-size:11px;color:#6AA2CD;margin-top:2px;">발행 캘린더에 D-Day, D-1 해당 항목이 없어요. 오늘: ${todayStr}</div>
         </div>
       </div>`;
   }
