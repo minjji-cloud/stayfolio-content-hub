@@ -322,8 +322,19 @@
             <button class="filter-chip" onclick="filterReq('발행완료',this)">발행완료</button>
             <div style="margin-left:auto;" class="search-box">
               <span style="color:var(--text-faint);">🔍</span>
-              <input type="text" placeholder="프로젝트 검색..." id="search-input" oninput="renderRequests()">
+              <input type="text" placeholder="프로젝트 · 요청자 · 팀 검색..." id="search-input" oninput="renderRequests()" style="width:200px;">
             </div>
+          </div>
+          <div class="filter-bar" style="margin-top:-8px;margin-bottom:16px;">
+            <span style="font-size:12px;color:var(--text-muted);">기간</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input type="date" id="filter-date-from" onchange="renderRequests()"
+                style="font-family:var(--mono);font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);">
+              <span style="font-size:12px;color:var(--text-faint);">~</span>
+              <input type="date" id="filter-date-to" onchange="renderRequests()"
+                style="font-family:var(--mono);font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);">
+            </div>
+            <button class="filter-chip" onclick="clearDateFilter()" style="font-size:11px;padding:4px 10px;">초기화</button>
           </div>
           <div class="table-wrap">
             <table><thead><tr><th>요청팀</th><th>프로젝트명</th><th>요청자</th><th>기한</th><th>채널</th><th>킥오프</th><th>상태</th><th>배정현황</th><th></th></tr></thead>
@@ -383,7 +394,7 @@
 // ══════════════════════════════════════
 //  CONFIG — 여기만 수정하세요
 // ══════════════════════════════════════
-const OAUTH_CLIENT_ID = '406858292287-iffmnigg09q8sb86jnutr9tgo4efs3lq.apps.googleusercontent.com'; // ← Google OAuth 클라이언트 ID 입력
+const OAUTH_CLIENT_ID = 'YOUR_OAUTH_CLIENT_ID'; // ← Google OAuth 클라이언트 ID 입력
 
 const CONFIG = {
   SHEET_ID:   localStorage.getItem('hub_sheet_id')   || '',
@@ -490,7 +501,7 @@ async function loadFromSheets() {
   if(!accessToken) { alert('먼저 Google 로그인이 필요합니다.'); return; }
   setConnStatus('loading');
 
-  const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!A2:N500`);
+  const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!A2:O500`);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}`;
   try {
     const res = await fetch(url, { headers: sheetsHeaders() });
@@ -513,7 +524,8 @@ async function loadFromSheets() {
       assignee:  r[COL.ASSIGNEE]   || '',
       schedule:  r[COL.SCHEDULE]   || '',
       createdAt: r[COL.CREATED_AT] || '',
-      _rowIndex: rows.indexOf(r) + 2, // 1행=헤더, 데이터는 2행부터
+      deployed:  r[14]             || '', // O열 (0-based index 14)
+      _rowIndex: rows.indexOf(r) + 2,
     }));
 
     setConnStatus('connected');
@@ -527,8 +539,8 @@ async function loadFromSheets() {
   }
 }
 
-async function saveChannelData(key) {
-  const r = allRequests.find(x=>x.id===key||x.project===key);
+async function saveChannelData(rowIndex) {
+  const r = allRequests.find(x=>x._rowIndex==rowIndex);
   if(!r) return;
   const btn = document.getElementById('save-btn');
   const result = document.getElementById('save-result');
@@ -536,28 +548,31 @@ async function saveChannelData(key) {
   result.style.display = 'none';
 
   // 입력값 수집
-  const scheduleParts = [], assignees = [];
+  const scheduleParts = [], assignees = [], deployParts = [];
   r.channels.forEach(ch => {
     const sid = ch.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'');
-    const assignee = document.getElementById(`a_${sid}`)?.value.trim() || '';
-    const date     = document.getElementById(`d_${sid}`)?.value.trim() || '';
+    const assignee  = document.getElementById(`a_${sid}`)?.value.trim() || '';
+    const date      = document.getElementById(`d_${sid}`)?.value.trim() || '';
+    const deployed  = document.getElementById(`p_${sid}`)?.checked || false;
     if(date) scheduleParts.push(`${ch}:${date}`);
     if(assignee) assignees.push(assignee);
+    deployParts.push(`${ch}:${deployed}`);
   });
 
   const scheduleStr = scheduleParts.join(',');
   const assigneeStr = [...new Set(assignees)].join(',');
+  const deployedStr = deployParts.join(',');
   const newStatus   = document.getElementById('status-select')?.value || r.status;
 
-  // Sheets에 직접 쓰기 (K=상태, L=담당자, M=발행일정)
-  const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!K${r._rowIndex}:M${r._rowIndex}`);
+  // Sheets K=상태, L=담당자, M=발행일정, O=배포현황
+  const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!K${r._rowIndex}:O${r._rowIndex}`);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}?valueInputOption=RAW`;
 
   try {
     const res = await fetch(url, {
       method: 'PUT',
       headers: sheetsHeaders(),
-      body: JSON.stringify({ values: [[statusLabel(newStatus), assigneeStr, scheduleStr]] })
+      body: JSON.stringify({ values: [[statusLabel(newStatus), assigneeStr, scheduleStr, '', deployedStr]] })
     });
     if(!res.ok) throw new Error((await res.json()).error?.message || `HTTP ${res.status}`);
 
@@ -565,6 +580,7 @@ async function saveChannelData(key) {
     r.status   = newStatus;
     r.assignee = assigneeStr;
     r.schedule = scheduleStr;
+    r.deployed = deployedStr;
 
     result.style.display = 'block';
     result.className = 'save-result ok';
@@ -623,7 +639,19 @@ function refreshAllViews(){
   document.getElementById('req-badge').textContent=allRequests.filter(r=>r.status!=='published').length;
 }
 
-function renderDashboard(){
+function updateDeployBadge(checkbox, sid) {
+  const badge = document.getElementById(`pb_${sid}`);
+  if(!badge) return;
+  if(checkbox.checked) {
+    badge.textContent = '완료';
+    badge.style.background = 'var(--green-light)';
+    badge.style.color = 'var(--green)';
+  } else {
+    badge.textContent = '미배포';
+    badge.style.background = 'var(--surface2)';
+    badge.style.color = 'var(--text-faint)';
+  }
+}
   document.getElementById('s-progress').textContent=allRequests.filter(r=>r.status==='in-progress').length;
   document.getElementById('s-review').textContent=allRequests.filter(r=>r.status==='review').length;
   document.getElementById('s-done').textContent=allRequests.filter(r=>r.status==='published').length;
@@ -647,13 +675,22 @@ function filterReq(f,btn){
   document.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); renderRequests();
 }
+function clearDateFilter(){
+  document.getElementById('filter-date-from').value='';
+  document.getElementById('filter-date-to').value='';
+  renderRequests();
+}
 function renderRequests(){
   const q=(document.getElementById('search-input')?.value||'').toLowerCase();
+  const dateFrom=document.getElementById('filter-date-from')?.value||'';
+  const dateTo=document.getElementById('filter-date-to')?.value||'';
   const statusMap={'대기중':'waiting','진행중':'in-progress','검수중':'review','발행완료':'published'};
   const tbody=document.getElementById('req-tbody');
   let list=allRequests.filter(r=>{
     if(currentFilter!=='all'&&(statusMap[currentFilter]||currentFilter)!==r.status) return false;
-    if(q&&!r.project.toLowerCase().includes(q)&&!r.team.toLowerCase().includes(q)) return false;
+    if(q&&!r.project.toLowerCase().includes(q)&&!r.team.toLowerCase().includes(q)&&!r.requester.toLowerCase().includes(q)) return false;
+    if(dateFrom && r.deadline && r.deadline < dateFrom) return false;
+    if(dateTo   && r.deadline && r.deadline > dateTo)   return false;
     return true;
   });
   if(!list.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-faint);">요청서가 없습니다</td></tr>';return;}
@@ -744,14 +781,32 @@ function openDetail(rowIndex){
   // 담당자 파싱 (쉼표 구분 → 채널 순서대로 배정)
   const assigneeList=(r.assignee||'').split(',').map(s=>s.trim());
 
+  // 배포 여부 파싱 ("IG피드:true,뉴스레터:false")
+  const deployMap={};
+  (r.deployed||'').split(',').forEach(seg=>{
+    const [ch,val]=(seg+':').split(':');
+    if(ch.trim()) deployMap[ch.trim()]=val.trim()==='true';
+  });
+
   const chRowsHtml=r.channels.map((ch,i)=>{
     const sid=ch.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'');
     const assignee=assigneeList[i]||'';
     const date=schedMap[ch]||'';
+    const deployed=deployMap[ch]||false;
     return `<tr>
       <td><span class="content-tag ${chType(ch)}">${ch}</span></td>
       <td><input class="ch-input" id="a_${sid}" placeholder="담당자 이름" value="${assignee}"></td>
       <td><input class="ch-input date" id="d_${sid}" type="date" value="${date}"></td>
+      <td style="text-align:center;">
+        <label style="display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;">
+          <input type="checkbox" id="p_${sid}" ${deployed?'checked':''} onchange="updateDeployBadge(this,'${sid}')"
+            style="width:16px;height:16px;cursor:pointer;accent-color:var(--green);">
+          <span id="pb_${sid}" style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;
+            ${deployed?'background:var(--green-light);color:var(--green);':'background:var(--surface2);color:var(--text-faint);'}">
+            ${deployed?'완료':'미배포'}
+          </span>
+        </label>
+      </td>
     </tr>`;
   }).join('');
 
@@ -777,7 +832,7 @@ function openDetail(rowIndex){
         <span style="font-size:10px;color:var(--text-faint);font-weight:400;">저장 시 Sheets 자동 반영</span>
       </h4>
       <table class="ch-table">
-        <thead><tr><th>채널</th><th>담당자</th><th>발행일</th></tr></thead>
+        <thead><tr><th>채널</th><th>담당자</th><th>발행일</th><th style="text-align:center;">배포</th></tr></thead>
         <tbody>${chRowsHtml}</tbody>
       </table>
       <button class="save-btn" id="save-btn" onclick="saveChannelData('${r._rowIndex}')">💾 Sheets에 저장</button>
