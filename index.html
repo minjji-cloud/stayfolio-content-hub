@@ -383,7 +383,7 @@
 // ══════════════════════════════════════
 //  CONFIG — 여기만 수정하세요
 // ══════════════════════════════════════
-const OAUTH_CLIENT_ID = '406858292287-iffmnigg09q8sb86jnutr9tgo4efs3lq.apps.googleusercontent.com'; // ← Google OAuth 클라이언트 ID 입력
+const OAUTH_CLIENT_ID = 'YOUR_OAUTH_CLIENT_ID'; // ← Google OAuth 클라이언트 ID 입력
 
 const CONFIG = {
   SHEET_ID:   localStorage.getItem('hub_sheet_id')   || '',
@@ -691,7 +691,7 @@ function renderCalendar(){
       if(d.getFullYear()===currentYear&&d.getMonth()===currentMonth){
         const day=d.getDate();
         if(!events[day]) events[day]=[];
-        events[day].push({ch,project:r.project.slice(0,10),rowIndex:r._rowIndex});
+        events[day].push({ch,project:r.project,rowIndex:r._rowIndex});
       }
     });
   });
@@ -700,7 +700,7 @@ function renderCalendar(){
     const isToday=today.getFullYear()===currentYear&&today.getMonth()===currentMonth&&today.getDate()===d;
     const dateHtml=isToday?`<div class="cal-date today-num">${d}</div>`:`<div class="cal-date">${d}</div>`;
     const evHtml=(events[d]||[]).slice(0,3).map(e=>
-      `<div class="cal-event ${chType(e.ch)}" onclick="openDetail('${e.rowIndex}')" title="${e.project}">${e.ch}</div>`
+      `<div class="cal-event ${chType(e.ch)}" onclick="openDetail('${e.rowIndex}')" title="${e.project} - ${e.ch}">${e.project.slice(0,10)} - ${e.ch}</div>`
     ).join('')+(events[d]&&events[d].length>3?`<div style="font-size:10px;color:var(--text-faint)">+${events[d].length-3}개</div>`:'');
     body.innerHTML+=`<div class="cal-cell ${isToday?'today':''}">${dateHtml}${evHtml}</div>`;
   }
