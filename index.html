@@ -492,7 +492,62 @@
   </div>
 </div>
 
-<!-- Detail Panel -->
+<!-- ── 채널 추가 팝업 Step 1: 채널 선택 ── -->
+<div id="add-ch-step1" style="display:none;position:fixed;inset:0;background:rgba(20,18,14,0.5);z-index:200;align-items:center;justify-content:center;">
+  <div style="width:380px;background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden;animation:popIn 0.2s ease;">
+    <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:15px;font-weight:700;">채널 선택</div>
+      <button onclick="closeAddChPopup()" style="border:none;background:none;cursor:pointer;font-size:18px;color:var(--text-muted);">✕</button>
+    </div>
+    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:6px;">
+      ${[
+        {label:'[IG] 피드',     key:'ig-feed',   color:'#3EB8BB'},
+        {label:'[IG] 스토리',   key:'ig-story',  color:'#3EB1BB'},
+        {label:'[IG] 릴스',     key:'ig-reels',  color:'#6AA2CD'},
+        {label:'[IG] 쓰레드',   key:'ig-thread', color:'#B43C8A'},
+        {label:'[뉴스레터] 소식지', key:'nl-news', color:'#712B82'},
+        {label:'[뉴스레터] 단독',   key:'nl-solo', color:'#712B82'},
+        {label:'[플랫폼] 메인배너', key:'platform', color:'#5F2B82'},
+      ].map(ch=>`
+        <button onclick="selectAddChannel('${ch.label}')"
+          style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);
+          border:1px solid var(--border);background:var(--surface);cursor:pointer;font-family:var(--font);
+          font-size:13px;color:var(--text);text-align:left;transition:all 0.12s;"
+          onmouseover="this.style.borderColor='${ch.color}';this.style.background='#F8FFFE'"
+          onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
+          <span style="width:8px;height:8px;border-radius:50%;background:${ch.color};flex-shrink:0;"></span>
+          ${ch.label}
+        </button>`).join('')}
+    </div>
+  </div>
+</div>
+
+<!-- ── 채널 추가 팝업 Step 2: 이름 입력 ── -->
+<div id="add-ch-step2" style="display:none;position:fixed;inset:0;background:rgba(20,18,14,0.5);z-index:200;align-items:center;justify-content:center;">
+  <div style="width:360px;background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden;animation:popIn 0.2s ease;">
+    <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:15px;font-weight:700;">채널 이름 설정</div>
+      <button onclick="closeAddChPopup()" style="border:none;background:none;cursor:pointer;font-size:18px;color:var(--text-muted);">✕</button>
+    </div>
+    <div style="padding:18px 20px;">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
+        선택한 채널: <strong id="add-ch-base-label" style="color:var(--text);"></strong>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">구분 이름 입력 <span style="color:var(--text-faint);">(선택)</span></div>
+      <input type="text" id="add-ch-name-input" placeholder="예: 1차, 이벤트, 하반기 등"
+        style="width:100%;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border);
+        font-family:var(--font);font-size:13px;color:var(--text);margin-bottom:10px;"
+        onkeydown="if(event.key==='Enter')confirmAddChannel()">
+      <div style="font-size:11px;color:var(--text-faint);margin-bottom:16px;">
+        최종 채널명: <strong id="add-ch-preview" style="color:var(--accent);"></strong>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="closeAddChPopup()" style="flex:1;padding:9px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);font-family:var(--font);font-size:13px;cursor:pointer;">취소</button>
+        <button onclick="confirmAddChannel()" style="flex:2;padding:9px;border-radius:var(--radius);border:none;background:var(--accent);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">추가</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="overlay" id="detail-overlay" onclick="if(event.target===this)closePanel()">
   <div class="panel" id="detail-panel">
     <div class="panel-resize-handle" id="panel-resize-handle"></div>
@@ -720,7 +775,7 @@ async function saveChannelData(rowIndex) {
   btn.disabled = true; btn.textContent = '저장 중...';
   result.style.display = 'none';
 
-  // 입력값 수집
+  // 입력값 수집 (기본 채널)
   const scheduleParts = [], assignees = [], deployParts = [];
   r.channels.forEach(ch => {
     const sid = ch.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'');
@@ -731,6 +786,23 @@ async function saveChannelData(rowIndex) {
     if(date) scheduleParts.push(`${ch}:${date}`);
     if(assignee) assignees.push(assignee);
     deployParts.push(`${ch}:${skipped ? 'skip' : deployed}`);
+  });
+
+  // 추가된 채널 수집 (dataset.extraChannel이 있는 행)
+  const extraRows = document.querySelectorAll('#ch-table-body tr[data-extra-channel]');
+  extraRows.forEach(row => {
+    const ch  = row.dataset.extraChannel;
+    const sid = row.dataset.sid;
+    if(!ch || !sid) return;
+    const skipped  = document.getElementById(`sk_${sid}`)?.checked || false;
+    const assignee = skipped ? '' : (document.getElementById(`a_${sid}`)?.value.trim() || '');
+    const date     = skipped ? '' : (document.getElementById(`d_${sid}`)?.value.trim() || '');
+    const deployed = skipped ? false : (document.getElementById(`p_${sid}`)?.checked || false);
+    if(date) scheduleParts.push(`${ch}:${date}`);
+    if(assignee) assignees.push(assignee);
+    deployParts.push(`${ch}:${skipped ? 'skip' : deployed}`);
+    // 로컬 채널 배열에도 추가 (중복 방지)
+    if(!r.channels.includes(ch)) r.channels.push(ch);
   });
 
   const scheduleStr = scheduleParts.join(',');
@@ -1318,8 +1390,13 @@ function openDetail(rowIndex){
       </h4>
       <table class="ch-table">
         <thead><tr><th>채널</th><th>담당자</th><th>발행일</th><th style="text-align:center;color:var(--red);">진행X</th><th style="text-align:center;">배포</th></tr></thead>
-        <tbody>${chRowsHtml}</tbody>
+        <tbody id="ch-table-body">${chRowsHtml}</tbody>
       </table>
+      <button onclick="openAddChannelPopup()" style="width:100%;margin-top:10px;padding:8px;border-radius:var(--radius);border:1px dashed var(--border-strong);background:none;font-family:var(--font);font-size:12px;color:var(--text-muted);cursor:pointer;transition:all 0.15s;"
+        onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)';this.style.background='var(--accent-light)'"
+        onmouseout="this.style.borderColor='var(--border-strong)';this.style.color='var(--text-muted)';this.style.background='none'">
+        ＋ 채널 추가
+      </button>
       <button class="save-btn" id="save-btn" onclick="saveChannelData('${r._rowIndex}')">💾 Sheets에 저장</button>
       <div class="save-result" id="save-result"></div>
     </div>
@@ -1436,6 +1513,100 @@ function checkUrlParam() {
     };
     tryOpen();
   }
+}
+
+// ── 채널 추가 팝업 ──
+let _addChBase = '';
+let _currentPanelRowIndex = null; // openDetail에서 설정
+
+function openAddChannelPopup() {
+  document.getElementById('add-ch-step1').style.display = 'flex';
+}
+
+function selectAddChannel(baseLabel) {
+  _addChBase = baseLabel;
+  document.getElementById('add-ch-step1').style.display = 'none';
+  document.getElementById('add-ch-step2').style.display = 'flex';
+  const input = document.getElementById('add-ch-name-input');
+  input.value = '';
+  updateChPreview();
+  input.focus();
+  input.addEventListener('input', updateChPreview);
+}
+
+function updateChPreview() {
+  const suffix = document.getElementById('add-ch-name-input')?.value.trim();
+  const preview = suffix ? `${_addChBase}_${suffix}` : _addChBase;
+  const el = document.getElementById('add-ch-preview');
+  const base = document.getElementById('add-ch-base-label');
+  if(el) el.textContent = preview;
+  if(base) base.textContent = _addChBase;
+}
+
+function confirmAddChannel() {
+  const suffix = document.getElementById('add-ch-name-input')?.value.trim();
+  const chName = suffix ? `${_addChBase}_${suffix}` : _addChBase;
+  closeAddChPopup();
+
+  // 채널 순서 기준으로 삽입 위치 결정
+  const ORDER = ['[IG] 피드','[IG] 스토리','[IG] 릴스','[IG] 쓰레드','[뉴스레터] 소식지','[뉴스레터] 단독','[플랫폼] 메인배너'];
+  const baseOrder = ORDER.findIndex(o => _addChBase.startsWith(o) || _addChBase === o);
+
+  // 테이블에 새 행 추가
+  const tbody = document.getElementById('ch-table-body');
+  if(!tbody) return;
+
+  const sid = chName.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'') + '_' + Date.now();
+  const memberOptions = TEAM_MEMBERS.map(m=>`<option value="${m}">${m}</option>`).join('');
+
+  // 삽입 위치 찾기 (같은 계열 채널 다음, 없으면 맨 끝)
+  const rows = tbody.querySelectorAll('tr');
+  let insertBefore = null;
+  rows.forEach(row => {
+    const chCell = row.querySelector('td:first-child span');
+    if(!chCell) return;
+    const existCh = chCell.textContent.trim();
+    const existOrder = ORDER.findIndex(o => existCh.startsWith(o) || existCh === o);
+    if(existOrder > baseOrder && !insertBefore) insertBefore = row;
+  });
+
+  const newRow = document.createElement('tr');
+  newRow.id = `row_${sid}`;
+  newRow.innerHTML = `
+    <td><span class="content-tag ${chType(chName)}">${chName}</span></td>
+    <td>
+      <select class="ch-input" id="a_${sid}" style="cursor:pointer;">
+        <option value="">— 선택 —</option>
+        ${memberOptions}
+      </select>
+    </td>
+    <td><input class="ch-input date" id="d_${sid}" type="date"></td>
+    <td style="text-align:center;">
+      <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;" title="진행X (카운트 제외)">
+        <input type="checkbox" id="sk_${sid}" onchange="updateSkipRow(this,'${sid}')"
+          style="width:14px;height:14px;cursor:pointer;accent-color:var(--red);">
+        <span style="font-size:10px;color:var(--red);font-weight:600;">X</span>
+      </label>
+    </td>
+    <td style="text-align:center;">
+      <label style="display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;">
+        <input type="checkbox" id="p_${sid}" onchange="updateDeployBadge(this,'${sid}')"
+          style="width:16px;height:16px;cursor:pointer;accent-color:var(--green);">
+        <span id="pb_${sid}" style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;background:var(--surface2);color:var(--text-faint);">미배포</span>
+      </label>
+    </td>`;
+
+  // 추가된 채널임을 표시 (저장 시 수집용)
+  newRow.dataset.extraChannel = chName;
+  newRow.dataset.sid = sid;
+
+  if(insertBefore) tbody.insertBefore(newRow, insertBefore);
+  else tbody.appendChild(newRow);
+}
+
+function closeAddChPopup() {
+  document.getElementById('add-ch-step1').style.display = 'none';
+  document.getElementById('add-ch-step2').style.display = 'none';
 }
 
 function updateSkipRow(checkbox, sid) {
