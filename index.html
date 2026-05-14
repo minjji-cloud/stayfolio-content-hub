@@ -716,13 +716,13 @@ function renderRequests(){
   });
   if(!list.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-faint);">요청서가 없습니다</td></tr>';return;}
   tbody.innerHTML=list.map(r=>{
-    const chHtml=r.channels.slice(0,3).map(c=>`<span class="content-tag ${chType(c)}">${c}</span>`).join('')
-      +(r.channels.length>3?`<span style="font-size:10px;color:var(--text-faint);">+${r.channels.length-3}</span>`:'');
+    const chHtml=r.channels.map(c=>`<span class="content-tag ${chType(c)}">${c}</span>`).join('');
     const totalCh = r.channels.length;
     const assignedCh = r.assignee ? r.assignee.split(',').filter(a=>a.trim()).length : 0;
-    const assigned = `<span style="white-space:nowrap;font-size:11px;color:var(--text-muted);">
-      ${totalCh}개 중 <strong style="color:#2B5BFF;font-weight:700;">${assignedCh}개</strong> 배정
-    </span>`;
+    const unassignedCh = totalCh - assignedCh;
+    const assigned = unassignedCh <= 0
+      ? `<span style="white-space:nowrap;font-size:11px;color:#1A7A4A;font-weight:600;">✓ 전체 배정 완료</span>`
+      : `<span style="white-space:nowrap;font-size:11px;color:var(--text-muted);"><strong style="color:#2B5BFF;font-weight:700;">${unassignedCh}개</strong> 미배정</span>`;
     const detailPreview = r.detail ? r.detail.slice(0,30)+(r.detail.length>30?'…':'') : '—';
     return `<tr style="cursor:pointer" onclick="openDetail('${r._rowIndex}')">
       <td><span class="team-tag">${r.team}</span></td>
