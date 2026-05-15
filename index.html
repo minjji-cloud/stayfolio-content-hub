@@ -842,6 +842,13 @@ function updateDeployBadge(checkbox, sid) {
 }
 // ── 날짜 유틸 ──
 const DAY_KO = ['일','월','화','수','목','금','토'];
+
+// KST 기준 날짜 계산
+function getKSTDateStr(offsetDays=0) {
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000 + offsetDays * 86400000);
+  return kst.toISOString().split('T')[0];
+}
 function formatDateWithDay(dateStr) {
   if(!dateStr || dateStr === '—') return dateStr;
   // YYYY-MM-DD 형식 파싱
@@ -890,12 +897,6 @@ function renderDashboard(){
   const alertWrap = document.getElementById('deadline-alert-wrap');
   alertWrap.style.display = 'block';
 
-  // 한국 시간 기준 날짜 계산
-  function getKSTDateStr(offsetDays=0) {
-    const now = new Date();
-    const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000 + offsetDays * 86400000);
-    return kst.toISOString().split('T')[0];
-  }
   const todayStr    = getKSTDateStr(0);
   const tomorrowStr = getKSTDateStr(1);
 
