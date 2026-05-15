@@ -673,7 +673,7 @@ async function loadFromSheets() {
       status:    normalizeStatus(r.status || '대기중'),
       assignee:  r.assignee  || '',
       schedule:  r.schedule  || '',
-      createdAt: r.createdAt || '',
+      createdAt: toDateStr(r.createdAt) || '',
       deployed:  r.deployed  || '',
       memo:      r.memo      || '',
       refLink:   r.refLink   || '',
@@ -955,7 +955,7 @@ function renderDashboard(){
   }
   // ── 당일 신규 요청건 (KST 기준) ──
   const todayWrap = document.getElementById('today-requests-wrap');
-  const todayReqs = allRequests.filter(r => toDateStr(r.createdAt) === todayStr);
+  const todayReqs = allRequests.filter(r => r.createdAt === todayStr);
   if(todayReqs.length) {
     todayWrap.style.display = 'block';
     todayWrap.innerHTML = `
@@ -999,7 +999,7 @@ function renderDashboard(){
     tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-faint);">🔄 동기화 버튼을 눌러주세요</td></tr>'; return;
   }
   let filtered = allRequests.filter(r => {
-    if(toDateStr(r.createdAt) && toDateStr(r.createdAt) < cutoffStr) return false;
+    if(r.createdAt && r.createdAt < cutoffStr) return false;
     if(dashStatus !== 'all' && r.status !== dashStatus) return false;
     return true;
   });
@@ -1008,7 +1008,7 @@ function renderDashboard(){
     tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-faint);">해당 조건에 요청서가 없습니다</td></tr>'; return;
   }
   tbody.innerHTML=filtered.map(r=>{
-    const isNew = toDateStr(r.createdAt) === todayStr;
+    const isNew = r.createdAt === todayStr;
     return `<tr style="cursor:pointer;${isNew?'background:#F8FFFE;':''}" onclick="openDetail('${r._rowIndex}')">
       <td><span class="team-tag">${r.team}</span></td>
       <td style="font-weight:500;font-size:13px;">
