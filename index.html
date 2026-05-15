@@ -574,7 +574,7 @@
 const OAUTH_CLIENT_ID = '406858292287-iffmnigg09q8sb86jnutr9tgo4efs3lq.apps.googleusercontent.com';
 
 const CONFIG = {
-  SHEET_ID:   localStorage.getItem('hub_sheet_id')   || '',
+  SHEET_ID:   localStorage.getItem('hub_sheet_id')   || '16W9HBbxA2smEHdjKs21tvVKEOZGceBhKA0WY1gcljv8',
   SHEET_NAME: localStorage.getItem('hub_sheet_name') || '협업요청',
 };
 
@@ -678,6 +678,7 @@ function showApp(user) {
   if(!CONFIG.SHEET_ID) {
     document.getElementById('setup-banner').classList.remove('hidden');
   } else {
+    document.getElementById('setup-banner').classList.add('hidden');
     loadFromSheets();
   }
 }
