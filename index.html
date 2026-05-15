@@ -918,10 +918,22 @@ function updateDeployBadge(checkbox, sid) {
 const DAY_KO = ['일','월','화','수','목','금','토'];
 function formatDateWithDay(dateStr) {
   if(!dateStr || dateStr === '—') return dateStr;
-  const d = new Date(dateStr);
-  if(isNaN(d)) return dateStr;
+  // YYYY-MM-DD 형식 파싱
+  let d;
+  if(/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+    const parts = dateStr.slice(0,10).split('-');
+    d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+  } else {
+    // 영문 날짜 형식 (May 14, 2026 / May 14, 2026, 2:18:00 AM 등)
+    d = new Date(dateStr);
+  }
+  if(isNaN(d.getTime())) return dateStr;
+  // YYYY-MM-DD 형식으로 변환 (KST 보정 없이 로컬 기준)
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
   const day = DAY_KO[d.getDay()];
-  return `${dateStr} (${day})`;
+  return `${y}-${m}-${dd} (${day})`;
 }
 function stripAt(str) { return (str||'').replace(/^@/, ''); }
 
@@ -964,6 +976,9 @@ function renderDashboard(){
     });
   });
 
+  // D-Day 먼저, D-1 다음 순으로 정렬
+  alerts.sort((a, b) => (b.isToday ? 1 : 0) - (a.isToday ? 1 : 0));
+
   if(alerts.length) {
     alertWrap.innerHTML = `
       <div style="background:linear-gradient(135deg,#E8F8F8 0%,#EAF4FB 35%,#F0EBFF 70%,#F3E8F7 100%);border:1px solid #C8E8E8;border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:4px;">
@@ -996,7 +1011,7 @@ function renderDashboard(){
   }
   // ── 당일 신규 요청건 (KST 기준) ──
   const todayWrap = document.getElementById('today-requests-wrap');
-  const todayReqs = allRequests.filter(r => r.createdAt === todayStr);
+  const todayReqs = allRequests.filter(r => r.createdAt && r.createdAt.startsWith(todayStr));
   if(todayReqs.length) {
     todayWrap.style.display = 'block';
     todayWrap.innerHTML = `
@@ -1049,7 +1064,7 @@ function renderDashboard(){
     tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-faint);">해당 조건에 요청서가 없습니다</td></tr>'; return;
   }
   tbody.innerHTML=filtered.map(r=>{
-    const isNew = r.createdAt === todayStr;
+    const isNew = r.createdAt && r.createdAt.startsWith(todayStr);
     return `<tr style="cursor:pointer;${isNew?'background:#F8FFFE;':''}" onclick="openDetail('${r._rowIndex}')">
       <td><span class="team-tag">${r.team}</span></td>
       <td style="font-weight:500;font-size:13px;">
