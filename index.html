@@ -735,25 +735,18 @@ const FIXED_API_KEY = localStorage.getItem('hub_api_key') || '';
 
 async function loadFromSheets() {
   if(!CONFIG.SHEET_ID) { openConfig(); return; }
+  if(!accessToken) { alert('먼저 Google 로그인이 필요합니다.'); return; }
   setConnStatus('loading');
 
   try {
-    // 1단계: 스프레드시트 메타데이터로 sheetId 가져오기
-    const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}?fields=sheets.properties`;
-    const metaRes = await fetch(metaUrl, { headers: sheetsHeaders() });
-    if(!metaRes.ok) throw new Error((await metaRes.json()).error?.message || `HTTP ${metaRes.status}`);
-    const meta = await metaRes.json();
-
-    // 시트 이름으로 sheetId 찾기
-    const sheet = meta.sheets?.find(s => s.properties.title === CONFIG.SHEET_NAME)
-                || meta.sheets?.[0]; // 없으면 첫 번째 시트
-    const sheetId = sheet?.properties?.sheetId ?? 0;
-
-    // 2단계: sheetId로 데이터 읽기
-    const dataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/A2:Q500?majorDimension=ROWS`;
-    const dataRes = await fetch(dataUrl, { headers: sheetsHeaders() });
-    if(!dataRes.ok) throw new Error((await dataRes.json()).error?.message || `HTTP ${dataRes.status}`);
-    const data = await dataRes.json();
+    // 시트 이름 없이 첫 번째 시트 직접 읽기
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/A2:Q500`;
+    const res = await fetch(url, { headers: sheetsHeaders() });
+    if(!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
     const rows = (data.values || []).filter(r => r && r[COL.PROJECT]);
 
     allRequests = rows.map(r => ({
