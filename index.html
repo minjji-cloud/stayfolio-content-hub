@@ -170,6 +170,7 @@
   .panel{width:480px;min-width:360px;max-width:90vw;height:100vh;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;animation:slideIn 0.22s ease;position:relative;}
   .panel-resize-handle{position:absolute;left:0;top:0;bottom:0;width:5px;cursor:ew-resize;background:transparent;z-index:10;transition:background 0.15s;}
   .panel-resize-handle:hover{background:var(--accent);}
+  @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes slideIn{from{transform:translateX(40px);opacity:0;}to{transform:translateX(0);opacity:1;}}
   .panel-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px;position:sticky;top:0;background:var(--surface);z-index:1;}
   .panel-close{width:30px;height:30px;border-radius:var(--radius);border:1px solid var(--border);background:none;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);}
@@ -642,6 +643,16 @@ function handleLogout() {
 // ══════════════════════════════════════
 async function loadFromSheets() {
   setConnStatus('loading');
+
+  // 로딩 중 테이블에 스피너 표시
+  const dashTbody = document.getElementById('dash-tbody');
+  const reqTbody = document.getElementById('req-tbody');
+  const spinnerHtml = `<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-faint);">
+    <div style="display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin-right:8px;vertical-align:middle;"></div>
+    데이터를 불러오는 중...
+  </td></tr>`;
+  if(dashTbody) dashTbody.innerHTML = spinnerHtml;
+  if(reqTbody) reqTbody.innerHTML = spinnerHtml;
   try {
     const res = await fetch(APPS_SCRIPT_URL);
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
