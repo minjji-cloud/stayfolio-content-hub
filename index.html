@@ -244,8 +244,13 @@
     <p>Google 로그인으로 읽기·쓰기 모두 가능합니다.<br>스프레드시트 ID만 입력하면 돼요.</p>
     <div class="config-field">
       <label>스프레드시트 ID</label>
-      <input type="text" id="cfg-sheet-id" placeholder="URL의 /d/ 와 /edit 사이 문자열">
+      <input type="text" id="cfg-sheet-id" placeholder="URL의 /d/ 와 /edit 사이 문자열" value="16W9HBbxA2smEHdjKs21tvVKEOZGceBhKA0WY1gcljv8">
       <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">예: https://docs.google.com/spreadsheets/d/<strong>[여기]</strong>/edit</div>
+    </div>
+    <div class="config-field">
+      <label>Google API 키 <span style="color:var(--text-faint);font-weight:400;">(읽기 전용, 로그인 없이 사용 가능)</span></label>
+      <input type="text" id="cfg-api-key" placeholder="AIzaSy..." value="${localStorage.getItem('hub_api_key')||''}">
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Google Cloud Console → 사용자 인증 정보 → API 키</div>
     </div>
     <div class="config-field">
       <label>시트 이름</label>
@@ -711,6 +716,8 @@ function openConfig() {
 }
 function closeConfig() { document.getElementById('config-modal').classList.remove('open'); }
 function saveConfig() {
+  const apiKey = document.getElementById('cfg-api-key')?.value.trim() || '';
+  if(apiKey) localStorage.setItem('hub_api_key', apiKey);
   closeConfig();
   document.getElementById('setup-banner').classList.add('hidden');
   loadFromSheets();
@@ -723,15 +730,31 @@ function sheetsHeaders() {
   return { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' };
 }
 
+// API 키 (읽기 전용 - Google Cloud Console에서 발급)
+const FIXED_API_KEY = localStorage.getItem('hub_api_key') || '';
+
 async function loadFromSheets() {
   if(!CONFIG.SHEET_ID) { openConfig(); return; }
-  if(!accessToken) { alert('먼저 Google 로그인이 필요합니다.'); return; }
   setConnStatus('loading');
 
   const sheetRange = `'${CONFIG.SHEET_NAME}'!A2:Q500`;
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(sheetRange)}`;
+
+  // API 키가 있으면 API 키로 읽기 (로그인 불필요)
+  // 없으면 OAuth 토큰으로 읽기
+  let res;
+  if(FIXED_API_KEY) {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(sheetRange)}?key=${FIXED_API_KEY}`;
+    res = await fetch(url);
+  } else if(accessToken) {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(sheetRange)}`;
+    res = await fetch(url, { headers: sheetsHeaders() });
+  } else {
+    setConnStatus('error');
+    alert('Google 로그인이 필요합니다.');
+    return;
+  }
+
   try {
-    const res = await fetch(url, { headers: sheetsHeaders() });
     if(!res.ok) throw new Error((await res.json()).error?.message || `HTTP ${res.status}`);
     const data = await res.json();
     const rows = (data.values || []).filter(r => r && r[COL.PROJECT]);
