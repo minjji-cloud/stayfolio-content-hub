@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>콘텐츠 협업 허브 — 스테이폴리오</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+
 <style>
   :root {
     --bg:#F5F3EE;--surface:#FFFFFF;--surface2:#F0EDE7;
@@ -221,12 +221,15 @@
   <div class="login-card">
     <div class="login-logo">StayFolio</div>
     <div class="login-title">콘텐츠 협업 허브</div>
-    <div class="login-desc">Google 계정으로 로그인하면<br>슬랙 요청서를 실시간으로 확인하고<br>담당자·발행일을 바로 배정할 수 있어요.</div>
+    <div class="login-desc">이름을 입력하면 바로 시작할 수 있어요.<br>슬랙 요청서를 실시간으로 확인하고<br>담당자·발행일을 바로 배정할 수 있어요.</div>
+    <input type="text" id="login-name-input" placeholder="이름 입력 (예: 김민지)"
+      style="width:100%;padding:12px 16px;border-radius:var(--radius-lg);border:1px solid var(--border);
+      font-family:var(--font);font-size:14px;color:var(--text);margin-bottom:12px;text-align:center;"
+      onkeydown="if(event.key==='Enter')handleGoogleLogin()">
     <button class="google-btn" onclick="handleGoogleLogin()">
-      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
-      Google로 로그인
+      시작하기
     </button>
-    <div class="login-note">로그인 정보는 이 브라우저에만 저장되며<br>Google Sheets 읽기·쓰기 권한이 필요합니다.</div>
+    <div class="login-note">입력한 이름은 이 브라우저에만 저장됩니다.</div>
   </div>
 </div>
 
@@ -584,20 +587,11 @@
 
 <script>
 // ══════════════════════════════════════
-//  CONFIG — 여기만 수정하세요
+//  CONFIG
 // ══════════════════════════════════════
-const OAUTH_CLIENT_ID = '406858292287-iffmnigg09q8sb86jnutr9tgo4efs3lq.apps.googleusercontent.com';
+// Apps Script 웹 앱 URL — 인증 없이 누구나 사용 가능
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwdG8m_gOUqbmxX9pWrYlv618YbDCC7m3Rj7PumIgYAPs_6Pp_pZEjnH_Mc57DjNOho/exec';
 
-// Sheets ID 고정값 — 로그인만 하면 자동 연결
-const FIXED_SHEET_ID   = '16W9HBbxA2smEHdfKs21tvVKEOZGceBhKA0WY1gcljv8';
-const FIXED_SHEET_NAME = '협업요청';
-
-const CONFIG = {
-  get SHEET_ID()   { return FIXED_SHEET_ID; },
-  get SHEET_NAME() { return FIXED_SHEET_NAME; },
-};
-
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 const COL = { ID:0,TEAM:1,REQUESTER:2,PROJECT:3,PROMO_DATE:4,DEADLINE:5,CHANNELS:6,KICKOFF:7,REVIEW:8,DETAIL:9,STATUS:10,ASSIGNEE:11,SCHEDULE:12,CREATED_AT:13 };
 
 // 팀원 목록 (localStorage에 저장)
@@ -611,163 +605,68 @@ let allRequests = [];
 let currentFilter = 'all';
 const _today = new Date();
 let currentYear = _today.getFullYear(), currentMonth = _today.getMonth();
-let accessToken = null;
-let tokenClient = null;
 
-// ══════════════════════════════════════
-//  GOOGLE OAUTH (1시간 토큰 캐싱)
-// ══════════════════════════════════════
-const TOKEN_KEY = 'hub_access_token';
-const TOKEN_EXP_KEY = 'hub_token_exp';
-const TOKEN_USER_KEY = 'hub_token_user';
-
-function saveToken(token, user) {
-  const exp = Date.now() + 60 * 60 * 1000; // 1시간
-  sessionStorage.setItem(TOKEN_KEY, token);
-  sessionStorage.setItem(TOKEN_EXP_KEY, String(exp));
-  sessionStorage.setItem(TOKEN_USER_KEY, JSON.stringify(user));
-}
-function loadToken() {
-  const token = sessionStorage.getItem(TOKEN_KEY);
-  const exp   = Number(sessionStorage.getItem(TOKEN_EXP_KEY) || 0);
-  const user  = JSON.parse(sessionStorage.getItem(TOKEN_USER_KEY) || 'null');
-  if(token && exp > Date.now()) return { token, user };
-  return null;
-}
-function clearToken() {
-  sessionStorage.removeItem(TOKEN_KEY);
-  sessionStorage.removeItem(TOKEN_EXP_KEY);
-  sessionStorage.removeItem(TOKEN_USER_KEY);
-}
-
-// ══════════════════════════════════════
-//  GOOGLE OAUTH
-// ══════════════════════════════════════
-function initGoogleAuth() {
-  if(typeof google === 'undefined') {
-    setTimeout(initGoogleAuth, 500); return;
-  }
-  // 캐시된 토큰 확인
-  const cached = loadToken();
-  if(cached) {
-    accessToken = cached.token;
-    showApp(cached.user);
-    return;
-  }
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: OAUTH_CLIENT_ID,
-    scope: SCOPES,
-    callback: (resp) => {
-      if(resp.error) { console.error(resp); return; }
-      accessToken = resp.access_token;
-      fetchUserInfo();
-    }
-  });
-}
-
-function handleGoogleLogin() {
-  if(!tokenClient) {
-    // tokenClient가 없으면 다시 초기화
-    initGoogleAuth();
-    setTimeout(()=>{ if(tokenClient) tokenClient.requestAccessToken({ prompt: '' }); }, 600);
-    return;
-  }
-  tokenClient.requestAccessToken({ prompt: '' });
-}
-
-async function fetchUserInfo() {
-  try {
-    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    const user = await res.json();
-    saveToken(accessToken, user);
-    showApp(user);
-  } catch(e) {
-    showApp({ name: '사용자', picture: '' });
-  }
-}
+// ── 사용자 정보 (간단히 브라우저 저장) ──
+let currentUser = JSON.parse(localStorage.getItem('hub_user') || 'null');
 
 function showApp(user) {
+  if(user) {
+    currentUser = user;
+    localStorage.setItem('hub_user', JSON.stringify(user));
+  }
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').classList.add('visible');
-  document.getElementById('user-name').textContent = user.name || user.email || '사용자';
-  if(user.picture) document.getElementById('user-avatar').src = user.picture;
+  document.getElementById('user-name').textContent = currentUser?.name || '사용자';
+  if(currentUser?.picture) document.getElementById('user-avatar').src = currentUser.picture;
   document.getElementById('setup-banner').classList.add('hidden');
   loadFromSheets();
 }
 
+function handleGoogleLogin() {
+  const input = document.getElementById('login-name-input');
+  const name = input?.value.trim() || prompt('이름을 입력해주세요 (예: 김민지)');
+  if(!name) return;
+  showApp({ name: name, picture: '' });
+}
+
 function handleLogout() {
-  if(accessToken) google.accounts.oauth2.revoke(accessToken);
-  accessToken = null;
-  clearToken();
+  currentUser = null;
+  localStorage.removeItem('hub_user');
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').classList.remove('visible');
   allRequests = [];
 }
 
 // ══════════════════════════════════════
-//  CONFIG MODAL
+//  APPS SCRIPT API
 // ══════════════════════════════════════
-function openConfig() {
-  document.getElementById('cfg-sheet-id').value = CONFIG.SHEET_ID;
-  document.getElementById('cfg-sheet-name').value = CONFIG.SHEET_NAME;
-  document.getElementById('config-modal').classList.add('open');
-}
-function closeConfig() { document.getElementById('config-modal').classList.remove('open'); }
-function saveConfig() {
-  const apiKey = document.getElementById('cfg-api-key')?.value.trim() || '';
-  if(apiKey) localStorage.setItem('hub_api_key', apiKey);
-  closeConfig();
-  document.getElementById('setup-banner').classList.add('hidden');
-  loadFromSheets();
-}
-
-// ══════════════════════════════════════
-//  SHEETS API (OAuth 토큰 사용)
-// ══════════════════════════════════════
-function sheetsHeaders() {
-  return { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' };
-}
-
-// API 키 (읽기 전용 - Google Cloud Console에서 발급)
-const FIXED_API_KEY = localStorage.getItem('hub_api_key') || '';
-
 async function loadFromSheets() {
-  if(!CONFIG.SHEET_ID) { openConfig(); return; }
-  if(!accessToken) { alert('먼저 Google 로그인이 필요합니다.'); return; }
   setConnStatus('loading');
-
   try {
-    // 시트 이름 없이 첫 번째 시트 직접 읽기
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/A2:Q500`;
-    const res = await fetch(url, { headers: sheetsHeaders() });
-    if(!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error?.message || `HTTP ${res.status}`);
-    }
-    const data = await res.json();
-    const rows = (data.values || []).filter(r => r && r[COL.PROJECT]);
+    const res = await fetch(APPS_SCRIPT_URL);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const rows = json.data || [];
 
     allRequests = rows.map(r => ({
-      id:        r[COL.ID]         || '',
-      team:      r[COL.TEAM]       || '',
-      requester: r[COL.REQUESTER]  || '',
-      project:   r[COL.PROJECT]    || '',
-      promoDate: r[COL.PROMO_DATE] || '',
-      deadline:  r[COL.DEADLINE]   || '',
-      channels:  (r[COL.CHANNELS]  || '').split(',').map(s=>s.trim()).filter(Boolean),
-      kickoff:   r[COL.KICKOFF]    || '미진행',
-      review:    r[COL.REVIEW]     || '',
-      detail:    r[COL.DETAIL]     || '',
-      status:    normalizeStatus(r[COL.STATUS] || '대기중'),
-      assignee:  r[COL.ASSIGNEE]   || '',
-      schedule:  r[COL.SCHEDULE]   || '',
-      createdAt: r[COL.CREATED_AT] || '',
-      deployed:  r[14]             || '',
-      memo:      r[15]             || '',
-      refLink:   r[16]             || '',
-      _rowIndex: rows.indexOf(r) + 2,
+      id:        r.id        || '',
+      team:      r.team      || '',
+      requester: r.requester || '',
+      project:   r.project   || '',
+      promoDate: r.promoDate || '',
+      deadline:  r.deadline  || '',
+      channels:  (r.channels || '').split(',').map(s=>s.trim()).filter(Boolean),
+      kickoff:   r.kickoff   || '미진행',
+      review:    r.review    || '',
+      detail:    r.detail    || '',
+      status:    normalizeStatus(r.status || '대기중'),
+      assignee:  r.assignee  || '',
+      schedule:  r.schedule  || '',
+      createdAt: r.createdAt || '',
+      deployed:  r.deployed  || '',
+      memo:      r.memo      || '',
+      refLink:   r.refLink   || '',
+      _rowIndex: r._rowIndex,
     }));
 
     setConnStatus('connected');
@@ -789,7 +688,6 @@ async function saveChannelData(rowIndex) {
   btn.disabled = true; btn.textContent = '저장 중...';
   result.style.display = 'none';
 
-  // 입력값 수집 (기본 채널)
   const scheduleParts = [], assignees = [], deployParts = [];
   r.channels.forEach(ch => {
     const sid = ch.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'');
@@ -802,7 +700,6 @@ async function saveChannelData(rowIndex) {
     deployParts.push(`${ch}:${skipped ? 'skip' : deployed}`);
   });
 
-  // 추가된 채널 수집 (dataset.extraChannel이 있는 행)
   const extraRows = document.querySelectorAll('#ch-table-body tr[data-extra-channel]');
   extraRows.forEach(row => {
     const ch  = row.dataset.extraChannel;
@@ -815,7 +712,6 @@ async function saveChannelData(rowIndex) {
     if(date) scheduleParts.push(`${ch}:${date}`);
     if(assignee) assignees.push(assignee);
     deployParts.push(`${ch}:${skipped ? 'skip' : deployed}`);
-    // 로컬 채널 배열에도 추가 (중복 방지)
     if(!r.channels.includes(ch)) r.channels.push(ch);
   });
 
@@ -825,19 +721,21 @@ async function saveChannelData(rowIndex) {
   const newStatus   = document.getElementById('status-select')?.value || r.status;
   const memoStr     = document.getElementById('panel-memo')?.value.trim() || '';
 
-  // Sheets K=상태, L=담당자, M=발행일정, O=배포현황, P=메모
-  const range = encodeURIComponent(`K${r._rowIndex}:P${r._rowIndex}`);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}?valueInputOption=RAW`;
-
   try {
-    const res = await fetch(url, {
-      method: 'PUT',
-      headers: sheetsHeaders(),
-      body: JSON.stringify({ values: [[statusLabel(newStatus), assigneeStr, scheduleStr, '', deployedStr, memoStr]] })
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        rowIndex: r._rowIndex,
+        status:   statusLabel(newStatus),
+        assignee: assigneeStr,
+        schedule: scheduleStr,
+        deployed: deployedStr,
+        memo:     memoStr
+      })
     });
-    if(!res.ok) throw new Error((await res.json()).error?.message || `HTTP ${res.status}`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    // 로컬 상태 업데이트
     r.status   = newStatus;
     r.assignee = assigneeStr;
     r.schedule = scheduleStr;
@@ -846,7 +744,7 @@ async function saveChannelData(rowIndex) {
 
     result.style.display = 'block';
     result.className = 'save-result ok';
-    result.textContent = '✓ Sheets에 저장됐어요!';
+    result.textContent = '✓ 저장됐어요!';
     refreshAllViews();
   } catch(e) {
     result.style.display = 'block';
@@ -854,6 +752,18 @@ async function saveChannelData(rowIndex) {
     result.textContent = `저장 실패: ${e.message}`;
   }
   btn.disabled = false; btn.textContent = '💾 Sheets에 저장';
+}
+
+// ══════════════════════════════════════
+//  CONFIG MODAL (간단화)
+// ══════════════════════════════════════
+function openConfig() {
+  document.getElementById('config-modal').classList.add('open');
+}
+function closeConfig() { document.getElementById('config-modal').classList.remove('open'); }
+function saveConfig() {
+  closeConfig();
+  loadFromSheets();
 }
 
 // ══════════════════════════════════════
@@ -942,6 +852,23 @@ function formatDateWithDay(dateStr) {
 }
 function stripAt(str) { return (str||'').replace(/^@/, ''); }
 
+// 날짜 문자열을 YYYY-MM-DD로 정규화
+function toDateStr(val) {
+  if(!val) return '';
+  const s = String(val);
+  // 이미 YYYY-MM-DD 형식
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  // 영문 날짜 (May 15, 2026 / 2026. 5. 15 등)
+  const d = new Date(s);
+  if(!isNaN(d.getTime())) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dd}`;
+  }
+  return s.slice(0, 10);
+}
+
 function renderDashboard(){
   document.getElementById('s-progress').textContent=allRequests.filter(r=>r.status==='in-progress').length;
   document.getElementById('s-review').textContent=allRequests.filter(r=>r.status==='review').length;
@@ -1016,7 +943,7 @@ function renderDashboard(){
   }
   // ── 당일 신규 요청건 (KST 기준) ──
   const todayWrap = document.getElementById('today-requests-wrap');
-  const todayReqs = allRequests.filter(r => r.createdAt && r.createdAt.startsWith(todayStr));
+  const todayReqs = allRequests.filter(r => toDateStr(r.createdAt) === todayStr);
   if(todayReqs.length) {
     todayWrap.style.display = 'block';
     todayWrap.innerHTML = `
@@ -1060,7 +987,7 @@ function renderDashboard(){
     tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-faint);">🔄 동기화 버튼을 눌러주세요</td></tr>'; return;
   }
   let filtered = allRequests.filter(r => {
-    if(r.createdAt && r.createdAt < cutoffStr) return false;
+    if(toDateStr(r.createdAt) && toDateStr(r.createdAt) < cutoffStr) return false;
     if(dashStatus !== 'all' && r.status !== dashStatus) return false;
     return true;
   });
@@ -1069,7 +996,7 @@ function renderDashboard(){
     tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-faint);">해당 조건에 요청서가 없습니다</td></tr>'; return;
   }
   tbody.innerHTML=filtered.map(r=>{
-    const isNew = r.createdAt && r.createdAt.startsWith(todayStr);
+    const isNew = toDateStr(r.createdAt) === todayStr;
     return `<tr style="cursor:pointer;${isNew?'background:#F8FFFE;':''}" onclick="openDetail('${r._rowIndex}')">
       <td><span class="team-tag">${r.team}</span></td>
       <td style="font-weight:500;font-size:13px;">
@@ -1804,7 +1731,10 @@ function closePanel(){
 //  INIT
 // ══════════════════════════════════════
 window.addEventListener('load', () => {
-  initGoogleAuth();
+  // 저장된 사용자 있으면 자동 로그인
+  if(currentUser) {
+    showApp(currentUser);
+  }
   checkUrlParam();
 });
 </script>
