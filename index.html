@@ -583,9 +583,13 @@
 // ══════════════════════════════════════
 const OAUTH_CLIENT_ID = '406858292287-iffmnigg09q8sb86jnutr9tgo4efs3lq.apps.googleusercontent.com';
 
+// Sheets ID 고정값 — 로그인만 하면 자동 연결
+const FIXED_SHEET_ID   = '16W9HBbxA2smEHdjKs21tvVKEOZGceBhKA0WY1gcljv8';
+const FIXED_SHEET_NAME = '협업요청';
+
 const CONFIG = {
-  SHEET_ID:   localStorage.getItem('hub_sheet_id')   || '16W9HBbxA2smEHdjKs21tvVKEOZGceBhKA0WY1gcljv8',
-  SHEET_NAME: localStorage.getItem('hub_sheet_name') || '협업요청',
+  get SHEET_ID()   { return FIXED_SHEET_ID; },
+  get SHEET_NAME() { return FIXED_SHEET_NAME; },
 };
 
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
@@ -684,13 +688,8 @@ function showApp(user) {
   document.getElementById('app').classList.add('visible');
   document.getElementById('user-name').textContent = user.name || user.email || '사용자';
   if(user.picture) document.getElementById('user-avatar').src = user.picture;
-
-  if(!CONFIG.SHEET_ID) {
-    document.getElementById('setup-banner').classList.remove('hidden');
-  } else {
-    document.getElementById('setup-banner').classList.add('hidden');
-    loadFromSheets();
-  }
+  document.getElementById('setup-banner').classList.add('hidden');
+  loadFromSheets();
 }
 
 function handleLogout() {
@@ -712,13 +711,6 @@ function openConfig() {
 }
 function closeConfig() { document.getElementById('config-modal').classList.remove('open'); }
 function saveConfig() {
-  const sid  = document.getElementById('cfg-sheet-id').value.trim();
-  const name = document.getElementById('cfg-sheet-name').value.trim() || '협업요청';
-  if(!sid) { alert('스프레드시트 ID를 입력해주세요.'); return; }
-  CONFIG.SHEET_ID = sid;
-  CONFIG.SHEET_NAME = name;
-  localStorage.setItem('hub_sheet_id', sid);
-  localStorage.setItem('hub_sheet_name', name);
   closeConfig();
   document.getElementById('setup-banner').classList.add('hidden');
   loadFromSheets();
