@@ -737,26 +737,23 @@ async function loadFromSheets() {
   if(!CONFIG.SHEET_ID) { openConfig(); return; }
   setConnStatus('loading');
 
-  const sheetRange = `'${CONFIG.SHEET_NAME}'!A2:Q500`;
-
-  // API 키가 있으면 API 키로 읽기 (로그인 불필요)
-  // 없으면 OAuth 토큰으로 읽기
-  let res;
-  if(FIXED_API_KEY) {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(sheetRange)}?key=${FIXED_API_KEY}`;
-    res = await fetch(url);
-  } else if(accessToken) {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(sheetRange)}`;
-    res = await fetch(url, { headers: sheetsHeaders() });
-  } else {
-    setConnStatus('error');
-    alert('Google 로그인이 필요합니다.');
-    return;
-  }
-
   try {
-    if(!res.ok) throw new Error((await res.json()).error?.message || `HTTP ${res.status}`);
-    const data = await res.json();
+    // 1단계: 스프레드시트 메타데이터로 sheetId 가져오기
+    const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}?fields=sheets.properties`;
+    const metaRes = await fetch(metaUrl, { headers: sheetsHeaders() });
+    if(!metaRes.ok) throw new Error((await metaRes.json()).error?.message || `HTTP ${metaRes.status}`);
+    const meta = await metaRes.json();
+
+    // 시트 이름으로 sheetId 찾기
+    const sheet = meta.sheets?.find(s => s.properties.title === CONFIG.SHEET_NAME)
+                || meta.sheets?.[0]; // 없으면 첫 번째 시트
+    const sheetId = sheet?.properties?.sheetId ?? 0;
+
+    // 2단계: sheetId로 데이터 읽기
+    const dataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/A2:Q500?majorDimension=ROWS`;
+    const dataRes = await fetch(dataUrl, { headers: sheetsHeaders() });
+    if(!dataRes.ok) throw new Error((await dataRes.json()).error?.message || `HTTP ${dataRes.status}`);
+    const data = await dataRes.json();
     const rows = (data.values || []).filter(r => r && r[COL.PROJECT]);
 
     allRequests = rows.map(r => ({
@@ -774,9 +771,9 @@ async function loadFromSheets() {
       assignee:  r[COL.ASSIGNEE]   || '',
       schedule:  r[COL.SCHEDULE]   || '',
       createdAt: r[COL.CREATED_AT] || '',
-      deployed:  r[14]             || '', // O열
-      memo:      r[15]             || '', // P열
-      refLink:   r[16]             || '', // Q열 - 참고 스레드 및 노션 페이지
+      deployed:  r[14]             || '',
+      memo:      r[15]             || '',
+      refLink:   r[16]             || '',
       _rowIndex: rows.indexOf(r) + 2,
     }));
 
@@ -836,7 +833,7 @@ async function saveChannelData(rowIndex) {
   const memoStr     = document.getElementById('panel-memo')?.value.trim() || '';
 
   // Sheets K=상태, L=담당자, M=발행일정, O=배포현황, P=메모
-  const range = encodeURIComponent(`'${CONFIG.SHEET_NAME}'!K${r._rowIndex}:P${r._rowIndex}`);
+  const range = encodeURIComponent(`K${r._rowIndex}:P${r._rowIndex}`);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}?valueInputOption=RAW`;
 
   try {
