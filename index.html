@@ -728,8 +728,8 @@ async function loadFromSheets() {
   if(!accessToken) { alert('먼저 Google 로그인이 필요합니다.'); return; }
   setConnStatus('loading');
 
-  const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!A2:Q500`);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}`;
+  const sheetRange = `'${CONFIG.SHEET_NAME}'!A2:Q500`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(sheetRange)}`;
   try {
     const res = await fetch(url, { headers: sheetsHeaders() });
     if(!res.ok) throw new Error((await res.json()).error?.message || `HTTP ${res.status}`);
@@ -813,7 +813,7 @@ async function saveChannelData(rowIndex) {
   const memoStr     = document.getElementById('panel-memo')?.value.trim() || '';
 
   // Sheets K=상태, L=담당자, M=발행일정, O=배포현황, P=메모
-  const range = encodeURIComponent(`${CONFIG.SHEET_NAME}!K${r._rowIndex}:P${r._rowIndex}`);
+  const range = encodeURIComponent(`'${CONFIG.SHEET_NAME}'!K${r._rowIndex}:P${r._rowIndex}`);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}?valueInputOption=RAW`;
 
   try {
