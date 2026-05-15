@@ -572,6 +572,14 @@
         <div style="font-size:16px;font-weight:700;margin-bottom:4px;" id="panel-title">—</div>
         <div style="font-size:12px;color:var(--text-muted);" id="panel-meta">—</div>
       </div>
+      <button id="panel-slack-btn" onclick="openSlackLink()" style="display:none;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius);
+        border:1px solid #E8D5F5;background:#F8F0FF;cursor:pointer;font-family:var(--font);
+        font-size:11px;color:#5F2B82;margin-right:6px;white-space:nowrap;transition:all 0.15s;"
+        onmouseover="this.style.borderColor='#5F2B82';this.style.background='#EFE0FF'"
+        onmouseout="this.style.borderColor='#E8D5F5';this.style.background='#F8F0FF'">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;"><path d="M6 15a2 2 0 0 1-2 2 2 2 0 0 1-2-2 2 2 0 0 1 2-2h2v2zm1 0a2 2 0 0 1 2-2 2 2 0 0 1 2 2v5a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-5zm2-8a2 2 0 0 1-2-2 2 2 0 0 1 2-2 2 2 0 0 1 2 2v2H9zm0 1a2 2 0 0 1 2 2 2 2 0 0 1-2 2H4a2 2 0 0 1-2-2 2 2 0 0 1 2-2h5zm8 2a2 2 0 0 1 2-2 2 2 0 0 1 2 2 2 2 0 0 1-2 2h-2v-2zm-1 0a2 2 0 0 1-2 2 2 2 0 0 1-2-2V5a2 2 0 0 1 2-2 2 2 0 0 1 2 2v5zm-2 8a2 2 0 0 1 2 2 2 2 0 0 1-2 2 2 2 0 0 1-2-2v-2h2zm0-1a2 2 0 0 1-2-2 2 2 0 0 1 2-2h5a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-5z" fill="#5F2B82"/></svg>
+        슬랙 원본
+      </button>
       <button id="panel-link-btn" onclick="copyPanelLink()"
         style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius);
         border:1px solid var(--border);background:var(--surface);cursor:pointer;font-family:var(--font);
@@ -677,6 +685,7 @@ async function loadFromSheets() {
       deployed:  r.deployed  || '',
       memo:      r.memo      || '',
       refLink:   r.refLink   || '',
+      slackLink: r.slackLink || '',
       _rowIndex: r._rowIndex,
     }));
 
@@ -1328,6 +1337,17 @@ function openDetail(rowIndex){
   const url = new URL(location.href);
   url.searchParams.set('req', rowIndex);
   history.replaceState({}, '', url);
+
+  // 슬랙 원본 버튼 표시/숨김
+  const slackBtn = document.getElementById('panel-slack-btn');
+  if(slackBtn) {
+    if(r.slackLink) {
+      slackBtn.style.display = 'flex';
+      slackBtn.dataset.href = r.slackLink;
+    } else {
+      slackBtn.style.display = 'none';
+    }
+  }
   document.getElementById('panel-title').textContent=r.project;
   document.getElementById('panel-meta').textContent=`${r.team} · ${stripAt(r.requester)} · ${r.createdAt}`;
 
@@ -1532,6 +1552,24 @@ function removeMember(name) {
 }
 
 let currentPanelRowIndex = null;
+
+function openSlackLink() {
+  const btn = document.getElementById('panel-slack-btn');
+  const href = btn?.dataset.href;
+  if(!href) return;
+  // 채널 이름이면 슬랙 딥링크로 변환, URL이면 그대로 열기
+  if(href.startsWith('http')) {
+    window.open(href, '_blank');
+  } else {
+    // 채널 이름에서 # 제거하고 슬랙 앱으로 열기
+    const ch = href.replace(/^#/, '').trim();
+    window.open(`slack://channel?team=&id=${ch}`, '_blank');
+    // 앱이 없으면 웹으로 fallback
+    setTimeout(() => {
+      window.open(`https://slack.com/app_redirect?channel=${ch}`, '_blank');
+    }, 1500);
+  }
+}
 
 function copyPanelLink() {
   if(!currentPanelRowIndex) return;
