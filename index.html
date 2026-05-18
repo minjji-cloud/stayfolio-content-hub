@@ -410,6 +410,10 @@
             <button class="btn" style="width:32px;height:32px;padding:0;justify-content:center;" onclick="prevMonth()">←</button>
             <h3 id="cal-label">2026년 6월</h3>
             <button class="btn" style="width:32px;height:32px;padding:0;justify-content:center;" onclick="nextMonth()">→</button>
+            <select id="cal-assignee-filter" onchange="renderCalendar()"
+              style="font-family:var(--font);font-size:12px;padding:5px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;margin-left:12px;">
+              <option value="">전체 담당자</option>
+            </select>
             <div style="margin-left:auto;display:flex;gap:8px;font-size:11px;color:var(--text-muted);flex-wrap:wrap;">
               <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#E8F8F8;border-left:3px solid #3EB8BB;"></span> 피드</span>
               <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#E8F7F8;border-left:3px solid #3EB1BB;"></span> 스토리</span>
@@ -712,7 +716,10 @@ async function saveChannelData(rowIndex) {
   r.channels.forEach(ch => {
     const sid = ch.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'');
     const skipped  = document.getElementById(`sk_${sid}`)?.checked || false;
-    const assignee = skipped ? '' : (document.getElementById(`a_${sid}`)?.value.trim() || '');
+    const sel = document.getElementById(`a_${sid}`);
+    // 다중 선택 담당자 수집
+    const selectedAssignees = skipped ? [] : (sel ? Array.from(sel.selectedOptions).map(o=>o.value).filter(Boolean) : []);
+    const assignee = selectedAssignees.join('+');
     const date     = skipped ? '' : (document.getElementById(`d_${sid}`)?.value.trim() || '');
     const deployed = skipped ? false : (document.getElementById(`p_${sid}`)?.checked || false);
     if(date) scheduleParts.push(`${ch}:${date}`);
@@ -736,7 +743,8 @@ async function saveChannelData(rowIndex) {
   });
 
   const scheduleStr = scheduleParts.join(',');
-  const assigneeStr = [...new Set(assignees)].join(',');
+  // 채널별 담당자를 순서대로 저장 (쉼표 구분)
+  const assigneeStr = assignees.join(',');
   const deployedStr = deployParts.join(',');
   const newStatus   = document.getElementById('status-select')?.value || r.status;
   const memoStr     = document.getElementById('panel-memo')?.value.trim() || '';
@@ -1079,7 +1087,7 @@ function renderRequests(){
     const unassignedCh = Math.max(0, activeCh - assignedCh);
     const assigned = unassignedCh <= 0 && activeCh > 0
       ? `<span style="white-space:nowrap;font-size:11px;color:#1A7A4A;font-weight:600;">✓ 전체 배정 완료</span>`
-      : `<span style="white-space:nowrap;font-size:11px;color:var(--text-muted);"><strong style="color:#2B5BFF;font-weight:700;">${unassignedCh}개</strong> 미배정${skipCount>0?` <span style="font-size:10px;color:var(--text-faint);">(${skipCount}개 제외)</span>`:''}</span>`;
+      : `<span style="white-space:nowrap;font-size:11px;color:var(--text-muted);"><strong style="color:#2B5BFF;font-weight:700;">${unassignedCh}개</strong> 미배정</span>`;
     const detailPreview = r.detail ? r.detail.slice(0,28)+(r.detail.length>28?'…':'') : '—';
     return `<tr style="cursor:pointer" onclick="openDetail('${r._rowIndex}')">
       <td style="font-size:12px;"><span class="team-tag">${r.team}</span></td>
@@ -1133,17 +1141,43 @@ function renderCalendar(){
   const firstDay=new Date(currentYear,currentMonth,1).getDay();
   const daysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
   const today=new Date();
+
+  // 담당자 필터 드롭다운 업데이트
+  const calFilter = document.getElementById('cal-assignee-filter');
+  if(calFilter && calFilter.options.length <= 1) {
+    const allAssignees = new Set();
+    allRequests.forEach(r => {
+      (r.assignee||'').split(',').forEach(a => {
+        a.split('+').forEach(name => { if(name.trim()) allAssignees.add(name.trim()); });
+      });
+    });
+    allAssignees.forEach(name => {
+      const o = document.createElement('option');
+      o.value = name; o.textContent = name;
+      calFilter.appendChild(o);
+    });
+  }
+  const filterAssignee = calFilter?.value || '';
+
   const events={};
   allRequests.forEach(r=>{
     if(!r.schedule) return;
-    r.schedule.split(',').forEach(seg=>{
-      const [ch,dt]=(seg+':').split(':').map(s=>s.trim());
+    const assigneeList = (r.assignee||'').split(',').map(a=>a.trim());
+    r.schedule.split(',').forEach((seg,idx)=>{
+      const colonIdx = seg.indexOf(':');
+      if(colonIdx < 0) return;
+      const ch = seg.slice(0, colonIdx).trim();
+      const dt = seg.slice(colonIdx+1).trim();
       if(!ch||!dt) return;
+      // 담당자 필터 적용
+      const chAssignee = assigneeList[r.channels.indexOf(ch)] || '';
+      const chAssignees = chAssignee.split('+').map(a=>a.trim());
+      if(filterAssignee && !chAssignees.includes(filterAssignee)) return;
       const d=new Date(dt);
       if(d.getFullYear()===currentYear&&d.getMonth()===currentMonth){
         const day=d.getDate();
         if(!events[day]) events[day]=[];
-        events[day].push({ch,project:r.project,rowIndex:r._rowIndex});
+        events[day].push({ch,project:r.project,rowIndex:r._rowIndex,assignee:chAssignee});
       }
     });
   });
@@ -1380,20 +1414,27 @@ function openDetail(rowIndex){
 
   const chRowsHtml=r.channels.map((ch,i)=>{
     const sid=ch.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'');
-    const assignee=assigneeList[i]||'';
+    // 채널별 담당자 파싱 (채널:담당자1+담당자2 형식)
+    const chAssigneeMap = {};
+    (r.assignee||'').split(',').forEach((a,idx) => {
+      const ch = r.channels[idx];
+      if(ch) chAssigneeMap[ch] = a.trim();
+    });
+    const assignee = chAssigneeMap[ch] || assigneeList[i] || '';
+    const assigneeArr = assignee ? assignee.split('+').map(a=>a.trim()) : [];
     const date=schedMap[ch]||'';
     const deployed=deployMap[ch]||false;
     const skipped=skipMap[ch]||false;
     const memberOptions = TEAM_MEMBERS.map(m=>
-      `<option value="${m}" ${m===assignee?'selected':''}>${m}</option>`
+      `<option value="${m}" ${assigneeArr.includes(m)?'selected':''}>${m}</option>`
     ).join('');
     return `<tr id="row_${sid}" style="${skipped?'opacity:0.4;':''}">
       <td><span class="content-tag ${chType(ch)}">${ch}</span></td>
       <td>
-        <select class="ch-input" id="a_${sid}" style="cursor:pointer;" ${skipped?'disabled':''}>
-          <option value="">— 선택 —</option>
+        <select class="ch-input" id="a_${sid}" multiple style="cursor:pointer;height:auto;min-height:32px;padding:4px;" ${skipped?'disabled':''}>
           ${memberOptions}
         </select>
+        <div style="font-size:10px;color:var(--text-faint);margin-top:2px;">Ctrl/Cmd 클릭으로 다중 선택</div>
       </td>
       <td><input class="ch-input date" id="d_${sid}" type="date" value="${date}" ${skipped?'disabled':''}></td>
       <td style="text-align:center;">
@@ -1555,20 +1596,12 @@ let currentPanelRowIndex = null;
 
 function openSlackLink() {
   const btn = document.getElementById('panel-slack-btn');
-  const href = btn?.dataset.href;
-  if(!href) return;
-  // 채널 이름이면 슬랙 딥링크로 변환, URL이면 그대로 열기
-  if(href.startsWith('http')) {
-    window.open(href, '_blank');
-  } else {
-    // 채널 이름에서 # 제거하고 슬랙 앱으로 열기
-    const ch = href.replace(/^#/, '').trim();
-    window.open(`slack://channel?team=&id=${ch}`, '_blank');
-    // 앱이 없으면 웹으로 fallback
-    setTimeout(() => {
-      window.open(`https://slack.com/app_redirect?channel=${ch}`, '_blank');
-    }, 1500);
-  }
+  const raw = btn?.dataset.href || '';
+  if(!raw) return;
+  // "채널명https://..." 형식에서 https:// 이후만 추출
+  const idx = raw.indexOf('https://');
+  const url = idx >= 0 ? raw.slice(idx) : raw;
+  window.open(url, '_blank');
 }
 
 function copyPanelLink() {
