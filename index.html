@@ -747,17 +747,19 @@ async function saveChannelData(rowIndex) {
   btn.disabled = true; btn.textContent = '저장 중...';
   result.style.display = 'none';
 
-  const scheduleParts = [], endDateParts = [], assignees = [], deployParts = [];
+  const scheduleParts = [], endDateParts = [], timeParts = [], assignees = [], deployParts = [];
   r.channels.forEach(ch => {
     const sid = ch.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'');
     const skipped  = document.getElementById(`sk_${sid}`)?.checked || false;
     const sel = document.getElementById(`a_${sid}`);
     const selectedAssignees = skipped ? [] : (sel ? Array.from(sel.selectedOptions).map(o=>o.value).filter(Boolean) : []);
     const assignee = selectedAssignees.join('+');
-    const date     = skipped ? '' : (document.getElementById(`d_${sid}`)?.value.trim() || '');
-    const endDate  = skipped ? '' : (document.getElementById(`e_${sid}`)?.value.trim() || '');
-    const deployed = skipped ? false : (document.getElementById(`p_${sid}`)?.checked || false);
+    const date      = skipped ? '' : (document.getElementById(`d_${sid}`)?.value.trim() || '');
+    const time      = skipped ? '' : (document.getElementById(`t_${sid}`)?.value.trim() || '');
+    const endDate   = skipped ? '' : (document.getElementById(`e_${sid}`)?.value.trim() || '');
+    const deployed  = skipped ? false : (document.getElementById(`p_${sid}`)?.checked || false);
     if(date) scheduleParts.push(`${ch}:${date}`);
+    if(time) timeParts.push(`${ch}:${time}`);
     if(endDate) endDateParts.push(`${ch}:${endDate}`);
     if(assignee) assignees.push(assignee);
     deployParts.push(`${ch}:${skipped ? 'skip' : deployed}`);
@@ -769,10 +771,16 @@ async function saveChannelData(rowIndex) {
     const sid = row.dataset.sid;
     if(!ch || !sid) return;
     const skipped  = document.getElementById(`sk_${sid}`)?.checked || false;
-    const assignee = skipped ? '' : (document.getElementById(`a_${sid}`)?.value.trim() || '');
-    const date     = skipped ? '' : (document.getElementById(`d_${sid}`)?.value.trim() || '');
+    const sel = document.getElementById(`a_${sid}`);
+    const selectedAssignees = skipped ? [] : (sel ? Array.from(sel.selectedOptions).map(o=>o.value).filter(Boolean) : []);
+    const assignee = selectedAssignees.join('+');
+    const date    = skipped ? '' : (document.getElementById(`d_${sid}`)?.value.trim() || '');
+    const time    = skipped ? '' : (document.getElementById(`t_${sid}`)?.value.trim() || '');
+    const endDate = skipped ? '' : (document.getElementById(`e_${sid}`)?.value.trim() || '');
     const deployed = skipped ? false : (document.getElementById(`p_${sid}`)?.checked || false);
     if(date) scheduleParts.push(`${ch}:${date}`);
+    if(time) timeParts.push(`${ch}:${time}`);
+    if(endDate) endDateParts.push(`${ch}:${endDate}`);
     if(assignee) assignees.push(assignee);
     deployParts.push(`${ch}:${skipped ? 'skip' : deployed}`);
     if(!r.channels.includes(ch)) r.channels.push(ch);
@@ -780,6 +788,7 @@ async function saveChannelData(rowIndex) {
 
   const scheduleStr = scheduleParts.join(',');
   const endDateStr  = endDateParts.join(',');
+  const timeStr     = timeParts.join(',');
   const assigneeStr = assignees.join(',');
   const deployedStr = deployParts.join(',');
   const newStatus   = document.getElementById('status-select')?.value || r.status;
@@ -790,22 +799,24 @@ async function saveChannelData(rowIndex) {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({
-        rowIndex: r._rowIndex,
-        status:   statusLabel(newStatus),
-        assignee: assigneeStr,
-        schedule: scheduleStr,
-        endDate:  endDateStr,
-        deployed: deployedStr,
-        memo:     memoStr
+        rowIndex:   r._rowIndex,
+        status:     statusLabel(newStatus),
+        assignee:   assigneeStr,
+        schedule:   scheduleStr,
+        endDate:    endDateStr,
+        deployTime: timeStr,
+        deployed:   deployedStr,
+        memo:       memoStr
       })
     });
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    r.status   = newStatus;
-    r.assignee = assigneeStr;
-    r.schedule = scheduleStr;
-    r.deployed = deployedStr;
-    r.memo     = memoStr;
+    r.status     = newStatus;
+    r.assignee   = assigneeStr;
+    r.schedule   = scheduleStr;
+    r.deployed   = deployedStr;
+    r.deployTime = timeStr;
+    r.memo       = memoStr;
 
     result.style.display = 'block';
     result.className = 'save-result ok';
@@ -1499,6 +1510,16 @@ function openDetail(rowIndex){
     }
   });
 
+  // 배포 시간 파싱
+  const timeMap = {};
+  (r.deployTime||'').split(',').forEach(seg => {
+    const colonIdx = seg.indexOf(':');
+    if(colonIdx < 0) return;
+    const ch = seg.slice(0, colonIdx).trim();
+    const val = seg.slice(colonIdx+1).trim();
+    if(ch) timeMap[ch] = val;
+  });
+
   const chRowsHtml=r.channels.map((ch,i)=>{
     const sid=ch.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'');
     const chAssigneeMap = {};
@@ -1509,8 +1530,7 @@ function openDetail(rowIndex){
     const assignee = chAssigneeMap[ch] || assigneeList[i] || '';
     const assigneeArr = assignee ? assignee.split('+').map(a=>a.trim()) : [];
     const date=schedMap[ch]||'';
-    // 종료일 파싱 (endDate 맵에서)
-    const endDate = (r.endDate||'')[ch] || '';
+    const deployTime=timeMap[ch]||'';
     const deployed=deployMap[ch]||false;
     const skipped=skipMap[ch]||false;
     const memberOptions = TEAM_MEMBERS.map(m=>
@@ -1518,16 +1538,17 @@ function openDetail(rowIndex){
     ).join('');
     return `<tr id="row_${sid}" style="${skipped?'opacity:0.4;':''}">
       <td><span class="content-tag ${chType(ch)}">${ch}</span></td>
-      <td style="min-width:120px;max-width:160px;">
+      <td style="min-width:100px;">
         <select class="ch-input" id="a_${sid}" multiple style="cursor:pointer;height:auto;min-height:32px;max-height:90px;padding:4px;width:100%;font-size:12px;" ${skipped?'disabled':''}>
           ${memberOptions}
         </select>
         <div style="font-size:9px;color:var(--text-faint);margin-top:2px;">Ctrl/Cmd으로 다중선택</div>
       </td>
       <td><input class="ch-input date" id="d_${sid}" type="date" value="${date}" ${skipped?'disabled':''}></td>
-      <td><input class="ch-input date" id="e_${sid}" type="date" value="${r.endDateMap?.[ch]||''}" placeholder="종료일" ${skipped?'disabled':''} style="opacity:0.8;"></td>
+      <td><input class="ch-input" id="t_${sid}" type="time" value="${deployTime}" ${skipped?'disabled':''} style="width:100%;font-size:11px;padding:5px 4px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);"></td>
+      <td><input class="ch-input date" id="e_${sid}" type="date" value="${r.endDateMap?.[ch]||''}" ${skipped?'disabled':''}></td>
       <td style="text-align:center;">
-        <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;" title="진행X (카운트 제외)">
+        <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
           <input type="checkbox" id="sk_${sid}" ${skipped?'checked':''} onchange="updateSkipRow(this,'${sid}')"
             style="width:14px;height:14px;cursor:pointer;accent-color:var(--red);">
           <span style="font-size:10px;color:var(--red);font-weight:600;">X</span>
@@ -1596,12 +1617,13 @@ function openDetail(rowIndex){
       </h4>
       <table class="ch-table">
         <thead><tr>
-          <th style="width:18%;white-space:nowrap;">채널</th>
-          <th style="width:22%;">담당자</th>
-          <th style="width:18%;white-space:nowrap;">발행일</th>
-          <th style="width:18%;white-space:nowrap;">종료일</th>
+          <th style="width:15%;white-space:nowrap;">채널</th>
+          <th style="width:18%;">담당자</th>
+          <th style="width:14%;white-space:nowrap;">발행일</th>
+          <th style="width:12%;white-space:nowrap;">배포 시간</th>
+          <th style="width:14%;white-space:nowrap;">종료일</th>
           <th style="width:8%;text-align:center;white-space:nowrap;color:var(--red);">진행X</th>
-          <th style="width:16%;text-align:center;white-space:nowrap;">배포</th>
+          <th style="width:14%;text-align:center;white-space:nowrap;">배포</th>
         </tr></thead>
         <tbody id="ch-table-body">${chRowsHtml}</tbody>
       </table>
@@ -1818,15 +1840,17 @@ function confirmAddChannel() {
   newRow.id = `row_${sid}`;
   newRow.innerHTML = `
     <td><span class="content-tag ${chType(chName)}">${chName}</span></td>
-    <td>
-      <select class="ch-input" id="a_${sid}" style="cursor:pointer;">
-        <option value="">— 선택 —</option>
+    <td style="min-width:100px;">
+      <select class="ch-input" id="a_${sid}" multiple style="cursor:pointer;height:auto;min-height:32px;max-height:90px;padding:4px;width:100%;font-size:12px;">
         ${memberOptions}
       </select>
+      <div style="font-size:9px;color:var(--text-faint);margin-top:2px;">Ctrl/Cmd으로 다중선택</div>
     </td>
     <td><input class="ch-input date" id="d_${sid}" type="date"></td>
+    <td><input class="ch-input" id="t_${sid}" type="time" style="width:100%;font-size:11px;padding:5px 4px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);"></td>
+    <td><input class="ch-input date" id="e_${sid}" type="date"></td>
     <td style="text-align:center;">
-      <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;" title="진행X (카운트 제외)">
+      <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
         <input type="checkbox" id="sk_${sid}" onchange="updateSkipRow(this,'${sid}')"
           style="width:14px;height:14px;cursor:pointer;accent-color:var(--red);">
         <span style="font-size:10px;color:var(--red);font-weight:600;">X</span>
@@ -1857,13 +1881,17 @@ function updateSkipRow(checkbox, sid) {
   const row   = document.getElementById(`row_${sid}`);
   const aEl   = document.getElementById(`a_${sid}`);
   const dEl   = document.getElementById(`d_${sid}`);
+  const tEl   = document.getElementById(`t_${sid}`);
+  const eEl   = document.getElementById(`e_${sid}`);
   const pEl   = document.getElementById(`p_${sid}`);
   const pbEl  = document.getElementById(`pb_${sid}`);
   const skip  = checkbox.checked;
-  if(row)  row.style.opacity  = skip ? '0.4' : '1';
-  if(aEl)  aEl.disabled       = skip;
-  if(dEl)  dEl.disabled       = skip;
-  if(pEl)  pEl.disabled       = skip;
+  if(row)  row.style.opacity = skip ? '0.4' : '1';
+  if(aEl)  aEl.disabled = skip;
+  if(dEl)  dEl.disabled = skip;
+  if(tEl)  tEl.disabled = skip;
+  if(eEl)  eEl.disabled = skip;
+  if(pEl)  pEl.disabled = skip;
   if(pbEl) { pbEl.textContent = skip ? '제외' : (pEl?.checked ? '완료' : '미배포'); }
 }
 
