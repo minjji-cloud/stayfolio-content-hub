@@ -96,7 +96,8 @@
 
   /* Stats */
   .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
-  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;transition:all 0.15s;}
+  .stat-card:hover{border-color:var(--accent);box-shadow:0 2px 12px rgba(43,91,255,0.08);transform:translateY(-1px);}
   .stat-label{font-size:11px;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;}
   .stat-value{font-size:26px;font-weight:700;font-family:var(--mono);}
   .stat-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
@@ -320,10 +321,18 @@
         <!-- Dashboard -->
         <div class="view active" id="view-dashboard">
           <div class="stats">
-            <div class="stat-card"><div class="stat-label">진행중</div><div class="stat-value blue" id="s-progress">—</div><div class="stat-sub">프로젝트</div></div>
-            <div class="stat-card"><div class="stat-label">검수 대기</div><div class="stat-value amber" id="s-review">—</div><div class="stat-sub">콘텐츠 검토</div></div>
-            <div class="stat-card"><div class="stat-label">발행 완료</div><div class="stat-value green" id="s-done">—</div><div class="stat-sub">이번 달</div></div>
-            <div class="stat-card"><div class="stat-label">누락 위험</div><div class="stat-value red" id="s-risk">—</div><div class="stat-sub">미배정 건</div></div>
+            <div class="stat-card" onclick="filterDashboard('in-progress')" style="cursor:pointer;" title="진행중 목록 보기">
+              <div class="stat-label">진행중</div><div class="stat-value blue" id="s-progress">—</div><div class="stat-sub">프로젝트</div>
+            </div>
+            <div class="stat-card" onclick="filterDashboard('review')" style="cursor:pointer;" title="검수 대기 목록 보기">
+              <div class="stat-label">검수 대기</div><div class="stat-value amber" id="s-review">—</div><div class="stat-sub">콘텐츠 검토</div>
+            </div>
+            <div class="stat-card" onclick="filterDashboard('published')" style="cursor:pointer;" title="발행 완료 목록 보기">
+              <div class="stat-label">발행 완료</div><div class="stat-value green" id="s-done">—</div><div class="stat-sub">이번 달</div>
+            </div>
+            <div class="stat-card" onclick="filterDashboard('waiting')" style="cursor:pointer;" title="미배정 목록 보기">
+              <div class="stat-label">누락 위험</div><div class="stat-value red" id="s-risk">—</div><div class="stat-sub">미배정 건</div>
+            </div>
           </div>
           <!-- D-1 알림판 -->
           <div id="deadline-alert-wrap" style="margin-bottom:16px;display:none;"></div>
@@ -403,6 +412,30 @@
               <th style="width:5%;"></th>
             </tr></thead>
             <tbody id="req-tbody"></tbody></table>
+          </div>
+          <!-- 발행완료 섹션 -->
+          <div id="published-section" style="margin-top:24px;display:none;">
+            <div class="table-wrap">
+              <div class="table-header" style="cursor:pointer;" onclick="togglePublishedSection()">
+                <h3>✅ 발행 완료</h3>
+                <span id="published-count" style="font-size:12px;color:var(--text-muted);">0건</span>
+                <span id="published-toggle-icon" style="margin-left:auto;font-size:12px;color:var(--text-faint);">▼ 접기</span>
+              </div>
+              <div id="published-table-wrap">
+                <table style="table-layout:fixed;"><thead><tr>
+                  <th style="width:10%;">요청팀</th>
+                  <th style="width:18%;">프로젝트명</th>
+                  <th style="width:8%;white-space:nowrap;">요청자</th>
+                  <th style="width:12%;white-space:nowrap;">기한</th>
+                  <th style="width:20%;">채널</th>
+                  <th style="width:14%;">협업 내용</th>
+                  <th style="width:9%;white-space:nowrap;">상태</th>
+                  <th style="width:9%;white-space:nowrap;">배정현황</th>
+                  <th style="width:5%;"></th>
+                </tr></thead>
+                <tbody id="published-tbody"></tbody></table>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1047,6 +1080,15 @@ function renderDashboard(){
 }
 
 // ── 공통 정렬 함수 ──
+function filterDashboard(status) {
+  // 대시보드 상태 필터 드롭다운 변경 후 렌더링
+  const sel = document.getElementById('dash-status-filter');
+  if(sel) sel.value = status;
+  renderDashboard();
+  // 테이블로 스크롤
+  document.getElementById('dash-tbody')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function sortByDeadline(list, dir='asc') {
   return [...list].sort((a, b) => {
     const da = a.deadline || '9999';
@@ -1072,7 +1114,11 @@ function renderRequests(){
   const sortDir=document.getElementById('req-sort')?.value||'asc';
   const statusMap={'대기중':'waiting','진행중':'in-progress','검수중':'review','발행완료':'published'};
   const tbody=document.getElementById('req-tbody');
+
+  // 발행완료 제외한 메인 리스트
   let list=allRequests.filter(r=>{
+    if(r.status === 'published') return false; // 발행완료는 별도 섹션
+    if(currentFilter==='발행완료') return false; // 필터가 발행완료면 메인은 비움
     if(currentFilter!=='all'&&(statusMap[currentFilter]||currentFilter)!==r.status) return false;
     if(q&&!r.project.toLowerCase().includes(q)&&!r.team.toLowerCase().includes(q)&&!r.requester.toLowerCase().includes(q)) return false;
     if(dateFrom && r.deadline && r.deadline < dateFrom) return false;
@@ -1080,11 +1126,37 @@ function renderRequests(){
     return true;
   });
   list = sortByDeadline(list, sortDir);
-  if(!list.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-faint);">요청서가 없습니다</td></tr>';return;}
-  tbody.innerHTML=list.map(r=>{
+
+  // 발행완료 별도 섹션
+  let publishedList = allRequests.filter(r => {
+    if(r.status !== 'published') return false;
+    if(q&&!r.project.toLowerCase().includes(q)&&!r.team.toLowerCase().includes(q)&&!r.requester.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  publishedList = sortByDeadline(publishedList, sortDir);
+
+  const publishedSection = document.getElementById('published-section');
+  const publishedTbody = document.getElementById('published-tbody');
+  const publishedCount = document.getElementById('published-count');
+
+  if(publishedList.length > 0) {
+    publishedSection.style.display = 'block';
+    publishedCount.textContent = `${publishedList.length}건`;
+    publishedTbody.innerHTML = publishedList.map(r => renderReqRow(r)).join('');
+  } else {
+    publishedSection.style.display = 'none';
+  }
+
+  if(!list.length){
+    tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-faint);">${currentFilter==='발행완료'?'발행완료 항목은 하단 섹션에서 확인하세요':'요청서가 없습니다'}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML=list.map(r => renderReqRow(r)).join('');
+}
+
+function renderReqRow(r) {
     const chHtml=r.channels.map(c=>`<span class="content-tag ${chType(c)}">${c}</span>`).join('');
     const totalCh = r.channels.length;
-    // skip된 채널 파악
     const skipCount = (r.deployed||'').split(',').filter(seg=>{
       const parts = seg.split(':');
       return parts.length >= 2 && parts[1].trim() === 'skip';
@@ -1096,7 +1168,7 @@ function renderRequests(){
       ? `<span style="white-space:nowrap;font-size:11px;color:#1A7A4A;font-weight:600;">✓ 전체 배정 완료</span>`
       : `<span style="white-space:nowrap;font-size:11px;color:var(--text-muted);"><strong style="color:#2B5BFF;font-weight:700;">${unassignedCh}개</strong> 미배정</span>`;
     const detailPreview = r.detail ? r.detail.slice(0,28)+(r.detail.length>28?'…':'') : '—';
-    return `<tr style="cursor:pointer" onclick="openDetail('${r._rowIndex}')">
+    return `<tr style="cursor:pointer${r.status==='published'?';opacity:0.75;':''}" onclick="openDetail('${r._rowIndex}')">
       <td style="font-size:12px;"><span class="team-tag">${r.team}</span></td>
       <td style="font-weight:500;font-size:13px;word-break:keep-all;">${r.project}${!r.assignee&&r.status!=='published'?'<span class="tooltip-tag">미배정</span>':''}</td>
       <td style="font-size:12px;color:var(--text-muted);white-space:nowrap;">${stripAt(r.requester)}</td>
@@ -1107,7 +1179,15 @@ function renderRequests(){
       <td style="font-size:11px;">${assigned}</td>
       <td><span class="action-link" style="white-space:nowrap;">배정 →</span></td>
     </tr>`;
-  }).join('');
+}
+
+function togglePublishedSection() {
+  const wrap = document.getElementById('published-table-wrap');
+  const icon = document.getElementById('published-toggle-icon');
+  if(!wrap) return;
+  const isOpen = wrap.style.display !== 'none';
+  wrap.style.display = isOpen ? 'none' : 'block';
+  if(icon) icon.textContent = isOpen ? '▶ 펼치기' : '▼ 접기';
 }
 
 // ── 한국 공휴일 (고정 + 2026년 음력 공휴일) ──
