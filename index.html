@@ -747,7 +747,7 @@ async function saveChannelData(rowIndex) {
   btn.disabled = true; btn.textContent = '저장 중...';
   result.style.display = 'none';
 
-  const scheduleParts = [], endDateParts = [], timeParts = [], assignees = [], deployParts = [];
+  const scheduleParts = [], endDateParts = [], timeParts = [], assigneeParts = [], deployParts = [];
   r.channels.forEach(ch => {
     const sid = ch.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'');
     const skipped  = document.getElementById(`sk_${sid}`)?.checked || false;
@@ -761,7 +761,7 @@ async function saveChannelData(rowIndex) {
     if(date) scheduleParts.push(`${ch}:${date}`);
     if(time) timeParts.push(`${ch}:${time}`);
     if(endDate) endDateParts.push(`${ch}:${endDate}`);
-    if(assignee) assignees.push(assignee);
+    assigneeParts.push(assignee); // 채널 순서대로 담당자 저장
     deployParts.push(`${ch}:${skipped ? 'skip' : deployed}`);
   });
 
@@ -781,7 +781,7 @@ async function saveChannelData(rowIndex) {
     if(date) scheduleParts.push(`${ch}:${date}`);
     if(time) timeParts.push(`${ch}:${time}`);
     if(endDate) endDateParts.push(`${ch}:${endDate}`);
-    if(assignee) assignees.push(assignee);
+    assigneeParts.push(assignee);
     deployParts.push(`${ch}:${skipped ? 'skip' : deployed}`);
     if(!r.channels.includes(ch)) r.channels.push(ch);
   });
@@ -789,7 +789,7 @@ async function saveChannelData(rowIndex) {
   const scheduleStr = scheduleParts.join(',');
   const endDateStr  = endDateParts.join(',');
   const timeStr     = timeParts.join(',');
-  const assigneeStr = assignees.join(',');
+  const assigneeStr = assigneeParts.join(',');
   const deployedStr = deployParts.join(',');
   const newStatus   = document.getElementById('status-select')?.value || r.status;
   const memoStr     = document.getElementById('panel-memo')?.value.trim() || '';
