@@ -928,9 +928,12 @@ function renderDashboard(){
       const dt = seg.slice(colonIdx + 1).trim();
       if(!ch || !dt) return;
       if(dt === tomorrowStr || dt === todayStr) {
+        // 채널별 담당자 정확히 매칭 (채널 순서 기반)
         const assigneeList = (r.assignee||'').split(',').map(s=>s.trim());
         const idx = r.channels.findIndex(c => c.replace(/\s/g,'') === ch.replace(/\s/g,''));
-        const assignee = assigneeList[idx >= 0 ? idx : 0] || r.assignee || '담당자';
+        const rawAssignee = assigneeList[idx >= 0 ? idx : 0] || '';
+        // 다중 담당자(+ 구분) 처리
+        const assignee = rawAssignee.split('+').map(a=>a.trim()).filter(Boolean).join(', ') || '담당자';
         const dLabel = dt === todayStr ? 'D-Day 🚨' : 'D-1';
         alerts.push({ project: r.project, channel: ch, assignee, date: dt, rowIndex: r._rowIndex, dLabel, isToday: dt === todayStr });
       }
