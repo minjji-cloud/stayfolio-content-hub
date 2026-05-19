@@ -167,7 +167,7 @@
   /* Detail panel */
   .overlay{display:none;position:fixed;inset:0;background:rgba(20,18,14,0.5);z-index:100;align-items:flex-start;justify-content:flex-end;}
   .overlay.open{display:flex;}
-  .panel{width:680px;min-width:360px;max-width:90vw;height:100vh;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;animation:slideIn 0.22s ease;position:relative;}
+  .panel{width:820px;min-width:360px;max-width:92vw;height:100vh;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;animation:slideIn 0.22s ease;position:relative;}
   .panel-resize-handle{position:absolute;left:0;top:0;bottom:0;width:5px;cursor:ew-resize;background:transparent;z-index:10;transition:background 0.15s;}
   .panel-resize-handle:hover{background:var(--accent);}
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -183,10 +183,12 @@
   /* 채널별 배정 테이블 */
   .assign-section{background:var(--surface2);border-radius:var(--radius-lg);padding:16px;margin-bottom:18px;}
   .assign-section h4{font-size:12px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
-  .ch-table{width:100%;border-collapse:collapse;font-size:12px;}
-  .ch-table th{padding:7px 10px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);font-weight:500;text-align:left;border-bottom:1px solid var(--border);background:var(--surface);}
-  .ch-table td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  .ch-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
+  .ch-table th{padding:7px 8px;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted);font-weight:500;text-align:left;border-bottom:1px solid var(--border);background:var(--surface);}
+  .ch-table td{padding:6px 6px;border-bottom:1px solid var(--border);vertical-align:middle;overflow:hidden;}
   .ch-table tr:last-child td{border-bottom:none;}
+  .ch-input.date{width:100%;font-size:11px;}
+  .ch-input{width:100%;}
   .ch-input{width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--border);font-family:var(--font);font-size:12px;color:var(--text);background:var(--surface);transition:border-color 0.15s;}
   .ch-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(43,91,255,0.1);}
   .ch-input.date{font-family:var(--mono);}
@@ -1513,7 +1515,14 @@ function openDetail(rowIndex){
         <span style="font-size:10px;color:var(--text-faint);font-weight:400;">저장 시 Sheets 자동 반영</span>
       </h4>
       <table class="ch-table">
-        <thead><tr><th>채널</th><th>담당자</th><th>발행일</th><th>종료일</th><th style="text-align:center;color:var(--red);">진행X</th><th style="text-align:center;">배포</th></tr></thead>
+        <thead><tr>
+          <th style="width:18%;white-space:nowrap;">채널</th>
+          <th style="width:22%;">담당자</th>
+          <th style="width:18%;white-space:nowrap;">발행일</th>
+          <th style="width:18%;white-space:nowrap;">종료일</th>
+          <th style="width:8%;text-align:center;white-space:nowrap;color:var(--red);">진행X</th>
+          <th style="width:16%;text-align:center;white-space:nowrap;">배포</th>
+        </tr></thead>
         <tbody id="ch-table-body">${chRowsHtml}</tbody>
       </table>
       <button onclick="openAddChannelPopup()" style="width:100%;margin-top:10px;padding:8px;border-radius:var(--radius);border:1px dashed var(--border-strong);background:none;font-family:var(--font);font-size:12px;color:var(--text-muted);cursor:pointer;transition:all 0.15s;"
