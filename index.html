@@ -765,7 +765,9 @@ async function saveChannelData(rowIndex) {
     deployParts.push(`${ch}:${skipped ? 'skip' : deployed}`);
   });
 
-  const extraRows = document.querySelectorAll('#ch-table-body tr[data-extra-channel]');
+  // 추가된 채널 수집 - panel-body 안에서 찾기
+  const panelBody = document.getElementById('panel-body');
+  const extraRows = panelBody ? panelBody.querySelectorAll('tr[data-extra-channel]') : [];
   extraRows.forEach(row => {
     const ch  = row.dataset.extraChannel;
     const sid = row.dataset.sid;
@@ -1818,8 +1820,8 @@ function confirmAddChannel() {
   const ORDER = ['[IG] 피드','[IG] 스토리','[IG] 릴스','[IG] 쓰레드','[뉴스레터] 소식지','[뉴스레터] 단독','[플랫폼] 메인배너'];
   const baseOrder = ORDER.findIndex(o => _addChBase.startsWith(o) || _addChBase === o);
 
-  // 테이블에 새 행 추가
-  const tbody = document.getElementById('ch-table-body');
+  // 테이블에 새 행 추가 - panel-body 내에서 찾기
+  const tbody = document.getElementById('ch-table-body') || document.querySelector('#panel-body tbody');
   if(!tbody) return;
 
   const sid = chName.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'') + '_' + Date.now();
