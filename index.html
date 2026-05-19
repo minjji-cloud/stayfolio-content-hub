@@ -712,17 +712,18 @@ async function saveChannelData(rowIndex) {
   btn.disabled = true; btn.textContent = '저장 중...';
   result.style.display = 'none';
 
-  const scheduleParts = [], assignees = [], deployParts = [];
+  const scheduleParts = [], endDateParts = [], assignees = [], deployParts = [];
   r.channels.forEach(ch => {
     const sid = ch.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'');
     const skipped  = document.getElementById(`sk_${sid}`)?.checked || false;
     const sel = document.getElementById(`a_${sid}`);
-    // 다중 선택 담당자 수집
     const selectedAssignees = skipped ? [] : (sel ? Array.from(sel.selectedOptions).map(o=>o.value).filter(Boolean) : []);
     const assignee = selectedAssignees.join('+');
     const date     = skipped ? '' : (document.getElementById(`d_${sid}`)?.value.trim() || '');
+    const endDate  = skipped ? '' : (document.getElementById(`e_${sid}`)?.value.trim() || '');
     const deployed = skipped ? false : (document.getElementById(`p_${sid}`)?.checked || false);
     if(date) scheduleParts.push(`${ch}:${date}`);
+    if(endDate) endDateParts.push(`${ch}:${endDate}`);
     if(assignee) assignees.push(assignee);
     deployParts.push(`${ch}:${skipped ? 'skip' : deployed}`);
   });
@@ -743,7 +744,7 @@ async function saveChannelData(rowIndex) {
   });
 
   const scheduleStr = scheduleParts.join(',');
-  // 채널별 담당자를 순서대로 저장 (쉼표 구분)
+  const endDateStr  = endDateParts.join(',');
   const assigneeStr = assignees.join(',');
   const deployedStr = deployParts.join(',');
   const newStatus   = document.getElementById('status-select')?.value || r.status;
@@ -758,6 +759,7 @@ async function saveChannelData(rowIndex) {
         status:   statusLabel(newStatus),
         assignee: assigneeStr,
         schedule: scheduleStr,
+        endDate:  endDateStr,
         deployed: deployedStr,
         memo:     memoStr
       })
@@ -1417,7 +1419,6 @@ function openDetail(rowIndex){
 
   const chRowsHtml=r.channels.map((ch,i)=>{
     const sid=ch.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'');
-    // 채널별 담당자 파싱 (채널:담당자1+담당자2 형식)
     const chAssigneeMap = {};
     (r.assignee||'').split(',').forEach((a,idx) => {
       const ch = r.channels[idx];
@@ -1426,6 +1427,8 @@ function openDetail(rowIndex){
     const assignee = chAssigneeMap[ch] || assigneeList[i] || '';
     const assigneeArr = assignee ? assignee.split('+').map(a=>a.trim()) : [];
     const date=schedMap[ch]||'';
+    // 종료일 파싱 (endDate 맵에서)
+    const endDate = (r.endDate||'')[ch] || '';
     const deployed=deployMap[ch]||false;
     const skipped=skipMap[ch]||false;
     const memberOptions = TEAM_MEMBERS.map(m=>
@@ -1433,13 +1436,14 @@ function openDetail(rowIndex){
     ).join('');
     return `<tr id="row_${sid}" style="${skipped?'opacity:0.4;':''}">
       <td><span class="content-tag ${chType(ch)}">${ch}</span></td>
-      <td>
-        <select class="ch-input" id="a_${sid}" multiple style="cursor:pointer;height:auto;min-height:32px;padding:4px;" ${skipped?'disabled':''}>
+      <td style="min-width:120px;max-width:160px;">
+        <select class="ch-input" id="a_${sid}" multiple style="cursor:pointer;height:auto;min-height:32px;max-height:90px;padding:4px;width:100%;font-size:12px;" ${skipped?'disabled':''}>
           ${memberOptions}
         </select>
-        <div style="font-size:10px;color:var(--text-faint);margin-top:2px;">Ctrl/Cmd 클릭으로 다중 선택</div>
+        <div style="font-size:9px;color:var(--text-faint);margin-top:2px;">Ctrl/Cmd으로 다중선택</div>
       </td>
       <td><input class="ch-input date" id="d_${sid}" type="date" value="${date}" ${skipped?'disabled':''}></td>
+      <td><input class="ch-input date" id="e_${sid}" type="date" value="${r.endDateMap?.[ch]||''}" placeholder="종료일" ${skipped?'disabled':''} style="opacity:0.8;"></td>
       <td style="text-align:center;">
         <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;" title="진행X (카운트 제외)">
           <input type="checkbox" id="sk_${sid}" ${skipped?'checked':''} onchange="updateSkipRow(this,'${sid}')"
@@ -1509,7 +1513,7 @@ function openDetail(rowIndex){
         <span style="font-size:10px;color:var(--text-faint);font-weight:400;">저장 시 Sheets 자동 반영</span>
       </h4>
       <table class="ch-table">
-        <thead><tr><th>채널</th><th>담당자</th><th>발행일</th><th style="text-align:center;color:var(--red);">진행X</th><th style="text-align:center;">배포</th></tr></thead>
+        <thead><tr><th>채널</th><th>담당자</th><th>발행일</th><th>종료일</th><th style="text-align:center;color:var(--red);">진행X</th><th style="text-align:center;">배포</th></tr></thead>
         <tbody id="ch-table-body">${chRowsHtml}</tbody>
       </table>
       <button onclick="openAddChannelPopup()" style="width:100%;margin-top:10px;padding:8px;border-radius:var(--radius);border:1px dashed var(--border-strong);background:none;font-family:var(--font);font-size:12px;color:var(--text-muted);cursor:pointer;transition:all 0.15s;"
