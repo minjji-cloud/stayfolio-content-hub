@@ -721,11 +721,13 @@ async function loadFromSheets() {
       assignee:  r.assignee  || '',
       schedule:  r.schedule  || '',
       createdAt: toDateStr(r.createdAt) || '',
-      deployed:  r.deployed  || '',
-      memo:      r.memo      || '',
-      refLink:   r.refLink   || '',
-      slackLink: r.slackLink || '',
-      _rowIndex: r._rowIndex,
+      deployed:   r.deployed   || '',
+      memo:       r.memo       || '',
+      refLink:    r.refLink    || '',
+      slackLink:  r.slackLink  || '',
+      endDate:    r.endDate    || '',
+      deployTime: r.deployTime || '',
+      _rowIndex:  r._rowIndex,
     }));
 
     setConnStatus('connected');
