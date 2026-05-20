@@ -799,6 +799,7 @@ async function saveChannelData(rowIndex) {
   const memoStr     = document.getElementById('panel-memo')?.value.trim() || '';
 
   try {
+    const channelsStr = r.channels.join(',');
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
@@ -810,6 +811,7 @@ async function saveChannelData(rowIndex) {
         endDate:    endDateStr,
         deployTime: timeStr,
         deployed:   deployedStr,
+        channels:   channelsStr,
         memo:       memoStr
       })
     });
@@ -820,6 +822,7 @@ async function saveChannelData(rowIndex) {
     r.schedule   = scheduleStr;
     r.deployed   = deployedStr;
     r.deployTime = timeStr;
+    r.channels   = channelsStr.split(',').map(s=>s.trim()).filter(Boolean);
     r.memo       = memoStr;
 
     result.style.display = 'block';
