@@ -1296,9 +1296,9 @@ function renderCalendar(){
       dateHtml=`<div class="cal-date" style="${isRed?'color:var(--red);font-weight:700;':''}" title="${holiday||''}">${d}${holiday?`<span style="font-size:8px;display:block;color:var(--red);line-height:1;margin-top:1px;font-weight:500;">${holiday}</span>`:''}
       </div>`;
     }
-    const evHtml=(events[d]||[]).slice(0,3).map(e=>
+    const evHtml=(events[d]||[]).map(e=>
       `<div class="cal-event ${chType(e.ch)}" onclick="openDetail('${e.rowIndex}')" title="${e.project} - ${e.ch}">${e.project.slice(0,10)} - ${e.ch}</div>`
-    ).join('')+(events[d]&&events[d].length>3?`<div style="font-size:10px;color:var(--text-faint)">+${events[d].length-3}개</div>`:'');
+    ).join('');
     body.innerHTML+=`<div class="cal-cell ${isToday?'today':''}">${dateHtml}${evHtml}</div>`;
   }
   const rem=7-((firstDay+daysInMonth)%7);
