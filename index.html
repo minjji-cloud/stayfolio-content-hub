@@ -1527,6 +1527,17 @@ function openDetail(rowIndex){
     if(ch) timeMap[ch] = val;
   });
 
+  // 종료일 파싱
+  const endDateMap = {};
+  (r.endDate||'').split(',').forEach(seg => {
+    const parts = seg.split(':');
+    if(parts.length >= 2) {
+      const ch = parts[0].trim();
+      const dt = parts.slice(1).join(':').trim();
+      if(ch) endDateMap[ch] = dt;
+    }
+  });
+
   const chRowsHtml=r.channels.map((ch,i)=>{
     const sid=ch.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'');
     const chAssigneeMap = {};
@@ -1553,7 +1564,7 @@ function openDetail(rowIndex){
       </td>
       <td><input class="ch-input date" id="d_${sid}" type="date" value="${date}" ${skipped?'disabled':''}></td>
       <td><input class="ch-input" id="t_${sid}" type="time" value="${deployTime}" ${skipped?'disabled':''} style="width:100%;font-size:11px;padding:5px 4px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);"></td>
-      <td><input class="ch-input date" id="e_${sid}" type="date" value="${r.endDateMap?.[ch]||''}" ${skipped?'disabled':''}></td>
+      <td><input class="ch-input date" id="e_${sid}" type="date" value="${endDateMap[ch]||''}" ${skipped?'disabled':''}></td>
       <td style="text-align:center;">
         <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
           <input type="checkbox" id="sk_${sid}" ${skipped?'checked':''} onchange="updateSkipRow(this,'${sid}')"
