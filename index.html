@@ -734,6 +734,9 @@ async function loadFromSheets() {
     document.getElementById('last-sync-label').textContent =
       '마지막 동기화: ' + new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
     refreshAllViews();
+    // 데이터 로드 완료 후 URL req 파라미터로 패널 자동 오픈
+    const reqParam = new URLSearchParams(location.search).get('req');
+    if(reqParam) openDetail(parseInt(reqParam));
   } catch(e) {
     setConnStatus('error');
     console.error(e);
