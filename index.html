@@ -902,6 +902,26 @@ function refreshAllViews(){
   document.getElementById('req-badge').textContent=allRequests.filter(r=>r.status!=='published').length;
 }
 
+function onStatusSelectChange(value) {
+  const isPublished = value === 'published';
+  // 채널 테이블의 모든 입력 요소 활성/비활성화
+  const panelBody = document.getElementById('panel-body');
+  if(!panelBody) return;
+  panelBody.querySelectorAll('.ch-input').forEach(el => {
+    // skip 체크된 행은 건드리지 않음
+    const row = el.closest('tr');
+    const sid = el.id?.replace(/^[adt]_/, '');
+    const skipEl = sid ? document.getElementById(`sk_${sid}`) : null;
+    const isSkipped = skipEl?.checked || false;
+    if(!isSkipped) el.disabled = isPublished;
+  });
+  panelBody.querySelectorAll('input[id^="p_"]').forEach(el => {
+    const sid = el.id.replace('p_', '');
+    const skipEl = document.getElementById(`sk_${sid}`);
+    if(!skipEl?.checked) el.disabled = isPublished;
+  });
+}
+
 function updateDeployBadge(checkbox, sid) {
   const badge = document.getElementById(`pb_${sid}`);
   if(!badge) return;
@@ -1541,6 +1561,7 @@ function openDetail(rowIndex){
     }
   });
 
+  const isPublished = r.status === 'published';
   const chRowsHtml=r.channels.map((ch,i)=>{
     const sid=ch.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'');
     const chAssigneeMap = {};
@@ -1554,20 +1575,21 @@ function openDetail(rowIndex){
     const deployTime=timeMap[ch]||'';
     const deployed=deployMap[ch]||false;
     const skipped=skipMap[ch]||false;
+    const disableInput = skipped || isPublished;
     const memberOptions = TEAM_MEMBERS.map(m=>
       `<option value="${m}" ${assigneeArr.includes(m)?'selected':''}>${m}</option>`
     ).join('');
     return `<tr id="row_${sid}" style="${skipped?'opacity:0.4;':''}">
       <td><span class="content-tag ${chType(ch)}">${ch}</span></td>
       <td style="min-width:100px;">
-        <select class="ch-input" id="a_${sid}" multiple style="cursor:pointer;height:auto;min-height:32px;max-height:90px;padding:4px;width:100%;font-size:12px;" ${skipped?'disabled':''}>
+        <select class="ch-input" id="a_${sid}" multiple style="cursor:pointer;height:auto;min-height:32px;max-height:90px;padding:4px;width:100%;font-size:12px;" ${disableInput?'disabled':''}>
           ${memberOptions}
         </select>
         <div style="font-size:9px;color:var(--text-faint);margin-top:2px;">Ctrl/Cmd으로 다중선택</div>
       </td>
-      <td><input class="ch-input date" id="d_${sid}" type="date" value="${date}" ${skipped?'disabled':''}></td>
-      <td><input class="ch-input" id="t_${sid}" type="time" value="${deployTime}" ${skipped?'disabled':''} style="width:100%;font-size:11px;padding:5px 4px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);"></td>
-      <td><input class="ch-input date" id="e_${sid}" type="date" value="${endDateMap[ch]||''}" ${skipped?'disabled':''}></td>
+      <td><input class="ch-input date" id="d_${sid}" type="date" value="${date}" ${disableInput?'disabled':''}></td>
+      <td><input class="ch-input" id="t_${sid}" type="time" value="${deployTime}" ${disableInput?'disabled':''} style="width:100%;font-size:11px;padding:5px 4px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);"></td>
+      <td><input class="ch-input date" id="e_${sid}" type="date" value="${endDateMap[ch]||''}" ${disableInput?'disabled':''}></td>
       <td style="text-align:center;">
         <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
           <input type="checkbox" id="sk_${sid}" ${skipped?'checked':''} onchange="updateSkipRow(this,'${sid}')"
@@ -1577,7 +1599,7 @@ function openDetail(rowIndex){
       </td>
       <td style="text-align:center;">
         <label style="display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;">
-          <input type="checkbox" id="p_${sid}" ${deployed?'checked':''} ${skipped?'disabled':''} onchange="updateDeployBadge(this,'${sid}')"
+          <input type="checkbox" id="p_${sid}" ${deployed?'checked':''} ${disableInput?'disabled':''} onchange="updateDeployBadge(this,'${sid}')"
             style="width:16px;height:16px;cursor:pointer;accent-color:var(--green);">
           <span id="pb_${sid}" style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;
             ${deployed?'background:var(--green-light);color:var(--green);':'background:var(--surface2);color:var(--text-faint);'}">
@@ -1595,7 +1617,7 @@ function openDetail(rowIndex){
   document.getElementById('panel-body').innerHTML=`
     <div class="field-group">
       <div class="field-label">상태 변경</div>
-      <select id="status-select" style="font-family:var(--font);font-size:13px;padding:6px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">${statusOptions}</select>
+      <select id="status-select" onchange="onStatusSelectChange(this.value)" style="font-family:var(--font);font-size:13px;padding:6px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">${statusOptions}</select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div class="field-group"><div class="field-label">프로모션 오픈</div><div style="font-family:var(--mono);font-size:12px;">${formatDateWithDay(r.promoDate)||'—'}</div></div>
