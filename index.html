@@ -904,21 +904,13 @@ function refreshAllViews(){
 
 function onStatusSelectChange(value) {
   const isPublished = value === 'published';
-  // 채널 테이블의 모든 입력 요소 활성/비활성화
   const panelBody = document.getElementById('panel-body');
   if(!panelBody) return;
   panelBody.querySelectorAll('.ch-input').forEach(el => {
-    // skip 체크된 행은 건드리지 않음
-    const row = el.closest('tr');
-    const sid = el.id?.replace(/^[adt]_/, '');
-    const skipEl = sid ? document.getElementById(`sk_${sid}`) : null;
-    const isSkipped = skipEl?.checked || false;
-    if(!isSkipped) el.disabled = isPublished;
+    el.disabled = isPublished;
   });
   panelBody.querySelectorAll('input[id^="p_"]').forEach(el => {
-    const sid = el.id.replace('p_', '');
-    const skipEl = document.getElementById(`sk_${sid}`);
-    if(!skipEl?.checked) el.disabled = isPublished;
+    el.disabled = isPublished;
   });
 }
 
@@ -1575,7 +1567,7 @@ function openDetail(rowIndex){
     const deployTime=timeMap[ch]||'';
     const deployed=deployMap[ch]||false;
     const skipped=skipMap[ch]||false;
-    const disableInput = skipped || isPublished;
+    const disableInput = isPublished;
     const memberOptions = TEAM_MEMBERS.map(m=>
       `<option value="${m}" ${assigneeArr.includes(m)?'selected':''}>${m}</option>`
     ).join('');
